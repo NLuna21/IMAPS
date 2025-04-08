@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Suppliers Inventory</title>
+  <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="{% static 'IMAPS_app/images/logo.png' %}" alt="Glow Glass Logo">
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item">
+        <a href="{% url 'packaging_list' %}">
+          <span class="icon">📦</span>
+          <span class="text">Packaging Materials</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'ingredients_list' %}">
+          <span class="icon">🌿</span>
+          <span class="text">Ingredients</span>
+        </a>
+      </li>
+      <li class="nav-item active">
+        <a href="{% url 'suppliers_list' %}">
+          <span class="icon">🏭</span>
+          <span class="text">Suppliers</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'report_summary' %}">
+          <span class="icon">📊</span>
+          <span class="text">Generate Report</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <h1>Suppliers Inventory</h1>
+    <div class="button-container">
+      <button class="button-outline" onclick="openModal('addSupplierModal')">+ Add Supplier</button>
+      <button class="import-button">Import Data</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Supplier Code</th>
+            <th>Supplier Name</th>
+            <th>Category</th>
+            <th>Contact Number</th>
+            <th>Email Address</th>
+            <th>Social Media</th>
+            <th>Point Person</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sup in suppliers %}
+          <tr>
+            <td>{{ sup.SupplierCode }}</td>
+            <td>{{ sup.SupplierName }}</td>
+            <td>{{ sup.Category }}</td>
+            <td>{{ sup.ContactNumber }}</td>
+            <td>{{ sup.EmailAddress }}</td>
+            <td>{{ sup.SocialMedia }}</td>
+            <td>{{ sup.PointPerson }}</td>
+            <td>
+              <button class="update-button" 
+              onclick="openUpdateModalSupplier(
+                  '{{ sup.SupplierCode }}',
+                  '{{ sup.SupplierCode }}',
+                  '{{ sup.SupplierName }}',
+                  '{{ sup.Category }}',
+                  '{{ sup.SocialMedia }}',
+                  '{{ sup.EmailAddress }}',
+                  '{{ sup.ContactNumber }}',
+                  '{{ sup.PointPerson }}'
+              )">Update</button>
+              <button class="button-outline" onclick="openDeleteModalSupplier('{{ sup.SupplierCode }}','{{ sup.SupplierName }}')">Delete</button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">No Suppliers Found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADD SUPPLIER MODAL -->
+  <div id="addSupplierModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Supplier</h2>
+        <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
+      </div>
+      <form method="POST" action="{% url 'supplier_create' %}">
+        {% csrf_token %}
+        {{ create_form.as_p }}
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Back</button>
+          <button type="submit" class="update-button">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- SUPPLIER UPDATE MODAL -->
+  <div id="updateSupplierModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Update Supplier</h2>
+        <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
+      </div>
+      <form method="POST" id="updateSupplierForm">
+        {% csrf_token %}
+        <label for="supplier_code_update">Supplier Code:</label>
+        <!-- Display SupplierCode but make it read-only -->
+        <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
+        
+        <label for="supplier_name_update">Supplier Name:</label>
+        <input type="text" name="SupplierName" id="supplier_name_update" required>
+        
+        <label for="category_update">Category:</label>
+        <select name="Category" id="category_update" required>
+          <option value="Ingredient">Ingredient</option>
+          <option value="Packaging">Packaging</option>
+          <option value="Both">Both</option>
+        </select>
+        
+        <label for="social_media_update">Social Media:</label>
+        <input type="text" name="SocialMedia" id="social_media_update">
+        
+        <label for="email_address_update">Email Address:</label>
+        <input type="email" name="EmailAddress" id="email_address_update">
+        
+        <label for="contact_number_update">Contact Number:</label>
+        <input type="text" name="ContactNumber" id="contact_number_update">
+        
+        <label for="point_person_update">Point Person:</label>
+        <input type="text" name="PointPerson" id="point_person_update">
+        
+        <div class="form-group">
+          <label for="deleteUsedPassword">Password:</label>
+          <input type="password" id="deleteUsedPassword" name="password" required>
+        </div>
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
+          <button type="submit" class="update-button">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- DELETE SUPPLIER MODAL -->
+  <div id="deleteSupplierModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Delete Supplier</h2>
+        <span class="close" onclick="closeModal('deleteSupplierModal')">&times;</span>
+      </div>
+      <p id="deleteSupplierMessage">Are you sure you want to delete this supplier?</p>
+      <form method="POST" id="deleteSupplierForm">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="deleteUsedPassword">Password:</label>
+          <input type="password" id="deleteUsedPassword" name="password" required>
+        </div>
+        <div class="button-container">
+          <button type="submit" class="update-button">Delete</button>
+          <button type="button" class="button-outline" onclick="closeModal('deleteSupplierModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript for Suppliers Modals -->
+  <script>
+    function openModal(id) {
+      document.getElementById(id).style.display = "flex";
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = "none";
+    }
+    function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson) {
+      // Set the form action URL for updating supplier using its primary key.
+      document.getElementById('updateSupplierForm').action = `/suppliers/update/${pk}/`;
+      // Pre-fill each field with the current supplier data.
+      document.getElementById('supplier_code_update').value = supplierCode;
+      document.getElementById('supplier_name_update').value = supplierName;
+      document.getElementById('category_update').value = category;
+      document.getElementById('social_media_update').value = socialMedia;
+      document.getElementById('email_address_update').value = emailAddress;
+      document.getElementById('contact_number_update').value = contactNumber;
+      document.getElementById('point_person_update').value = pointPerson;
+      openModal('updateSupplierModal');
+    }
+    function openDeleteModalSupplier(pk, name) {
+      document.getElementById('deleteSupplierMessage').textContent =
+        `Are you sure you want to delete "${name}"?`;
+      document.getElementById('deleteSupplierForm').action = `/suppliers/delete/${pk}/`;
+      openModal('deleteSupplierModal');
+    }
+    window.onclick = function(e) {
+      const modals = ['addSupplierModal','updateSupplierModal','deleteSupplierModal'];
+      modals.forEach(function(id) {
+        const modal = document.getElementById(id);
+        if (e.target === modal) {
+          closeModal(id);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

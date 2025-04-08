@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Packaging Materials Inventory</title>
+  <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Right-align numeric columns: Quantity Bought, Quantity Left, and Cost */
+    table tbody td {
+      text-align: left;
+    }
+    table tbody td:nth-child(3),
+    table tbody td:nth-child(4),
+    table tbody td:nth-child(9) {
+      text-align: right;
+    }
+    /* Extra spacing for form groups in modals */
+    .modal-content .form-group {
+      margin-bottom: 20px;
+    }
+    /* Styling for alert messages */
+    .alert {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #f5c6cb;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="{% static 'IMAPS_app/images/logo.png' %}" alt="Glow Glass Logo">
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item active">
+        <a href="{% url 'packaging_list' %}">
+          <span class="icon">📦</span>
+          <span class="text">Packaging Materials</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'ingredients_list' %}">
+          <span class="icon">🌿</span>
+          <span class="text">Ingredients</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'suppliers_list' %}">
+          <span class="icon">🏭</span>
+          <span class="text">Suppliers</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'report_summary' %}">
+          <span class="icon">📊</span>
+          <span class="text">Generate Report</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <h1>Packaging Materials Inventory</h1>
+    <!-- Messages Block -->
+    {% if messages %}
+      <div id="messages">
+        {% for message in messages %}
+          <div class="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="button-container">
+      <button class="button-outline" onclick="openModal('usedPackagingHistoryModal')">History of Used Packaging</button>
+      <button class="button-outline" onclick="openModal('addPackagingModal')">+ Add Packaging Materials</button>
+      <button class="button-outline" onclick="openModal('subtractPackagingModal')">Subtract Materials</button>
+      <button class="import-button">Import Data</button>
+    </div>
+
+    <!-- Packaging Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr class="table-header">
+            <th class="pagination" colspan="4">
+              Page 1/20
+              <button class="pageButton">&lt;</button>
+              <button class="pageButton">&gt;</button>
+            </th>
+            <th class="search-bar-container" colspan="6">
+              <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search Packaging...">
+                <button class="menu-button">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M3 12h18M3 6h18M3 18h18" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </th>
+          </tr>
+          <tr>
+            <th>Packaging Type</th>
+            <th>Batch Code</th>
+            <th>Quantity Bought</th>
+            <th>Quantity Left</th>
+            <th>Supplier</th>
+            <th>Date Delivered</th>
+            <th>Use Category</th>
+            <th>Status</th>
+            <th>Cost</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for material in materials %}
+          <tr data-packaging-pk="{{ material.id }}" data-packaging-code="{{ material.PackagingBatchCode }}">
+            <td>
+              {{ material.RawMaterialName }}
+              {% if material.ContainerSize %}
+                ({{ material.ContainerSize }})
+              {% endif %}
+            </td>
+            <td>{{ material.PackagingBatchCode }}</td>
+            <td>{{ material.QuantityBought }}</td>
+            <td>{{ material.QuantityLeft }}</td>
+            <td>{{ material.SupplierCode.SupplierName }}</td>
+            <td>{{ material.DateDelivered|date:"d/m/Y" }}</td>
+            <td>{{ material.UseCategory }}</td>
+            <td>
+              {% if material.Status == "Low Inventory" %}
+                <span class="status-pill red">Low Inventory</span>
+              {% elif material.Status == "OK" %}
+                <span class="status-pill green">OK</span>
+              {% else %}
+                <span class="status-pill">{{ material.Status }}</span>
+              {% endif %}
+            </td>
+            <td>₱{{ material.Cost }}</td>
+            <td>
+              <button class="update-button" onclick="openUpdateModalPackaging('{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}','{{ material.ContainerSize }}','{{ material.DateDelivered }}','{{ material.QuantityBought }}','{{ material.QuantityLeft }}','{{ material.UseCategory }}','{{ material.Cost }}','{{ material.SupplierCode.SupplierCode }}')">Update</button>
+              <button class="button-outline" onclick="openDeleteModalPackaging('{{ material.id }}','{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}')">Delete</button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10">No Packaging Materials Found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============= MODALS ============= -->
+
+  <!-- 1) Add Packaging Modal -->
+  <div id="addPackagingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Packaging Material</h2>
+        <span class="close" onclick="closeModal('addPackagingModal')">&times;</span>
+      </div>
+      <form method="POST" action="{% url 'packaging_create' %}" onsubmit="return confirm('Are you sure you want to add this record?');">
+        {% csrf_token %}
+        {{ create_form.as_p }}
+
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('addPackagingModal')">Discard</button>
+          <button type="submit" class="update-button">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2) Update Packaging Modal -->
+  <div id="updatePackagingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Update Packaging Material (Code: <span id="modalPackagingBatchCode"></span>)</h2>
+        <span class="close" onclick="closeModal('updatePackagingModal')">&times;</span>
+      </div>
+      <form method="POST" id="updatePackagingForm" onsubmit="return validatePackagingUpdate();">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="updatePassword">Password:</label>
+          <input type="password" id="updatePassword" name="password" required>
+        </div>
+        <input type="hidden" name="PackagingBatchCode" id="modalPackagingBatchCodeHidden" value="">
+        <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden" value="">
+        <div class="form-group">
+          <label for="RawMaterialName">Raw Material Name</label>
+          <input type="text" id="RawMaterialName" name="RawMaterialName">
+        </div>
+        <div class="form-group">
+          <label for="ContainerSize">Container Size</label>
+          <input type="text" id="ContainerSize" name="ContainerSize">
+        </div>
+        <div class="form-group">
+          <label for="DateDelivered">Date Delivered</label>
+          <input type="date" id="DateDelivered" name="DateDelivered">
+        </div>
+        <div class="form-group">
+          <label for="QuantityBought">Quantity Bought</label>
+          <input type="number" id="QuantityBought" name="QuantityBought" min="0">
+        </div>
+        <div class="form-group">
+          <label for="QuantityLeft">Quantity Left</label>
+          <input type="number" id="QuantityLeft" name="QuantityLeft" min="0">
+        </div>
+        <div class="form-group">
+          <label for="modalSupplierCode">Supplier:</label>
+          <select id="modalSupplierCode" name="SupplierCode">
+            <option value="">Select a Supplier</option>
+            <!-- Options will be inserted dynamically from /api/suppliers/packaging -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Use Category:</label>
+          <div id="packUseCategoryRadios">
+            <input type="radio" name="UseCategory" value="WBC" id="packUseCategoryWBC">
+            <label for="packUseCategoryWBC">WBC</label>
+            <input type="radio" name="UseCategory" value="GGB" id="packUseCategoryGGB">
+            <label for="packUseCategoryGGB">GGB</label>
+            <input type="radio" name="UseCategory" value="Both" id="packUseCategoryBoth">
+            <label for="packUseCategoryBoth">Both</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="Status">Status</label>
+          <input type="text" name="Status" id="Status" readonly>
+        </div>
+        <div class="form-group">
+          <label for="Cost">Cost</label>
+          <input type="number" id="Cost" name="Cost" min="0" step="any">
+        </div>
+        <!-- Hidden element to store the used quantity: used = QuantityBought - QuantityLeft -->
+        <input type="hidden" id="modalUsedPackaging" name="used" value="">
+        <div class="button-container">
+          <button type="submit" class="update-button">Update</button>
+          <button type="button" class="button-outline" onclick="closeModal('updatePackagingModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3) Delete Packaging Modal -->
+  <div id="deletePackagingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Delete Packaging Material</h2>
+        <span class="close" onclick="closeModal('deletePackagingModal')">&times;</span>
+      </div>
+      <p id="deletePackagingMessage">Are you sure you want to delete this packaging material?</p>
+      <form method="POST" id="deletePackagingForm" onsubmit="return confirm('Are you sure you want to delete this record?');">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="deletePassword">Password:</label>
+          <input type="password" id="deletePassword" name="password" required>
+        </div>
+        <div class="button-container">
+          <button type="submit" class="update-button">Delete</button>
+          <button type="button" class="button-outline" onclick="closeModal('deletePackagingModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4) Subtract Packaging Modal -->
+  <div id="subtractPackagingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Subtract Packaging Materials</h2>
+        <span class="close" onclick="closeModal('subtractPackagingModal')">&times;</span>
+      </div>
+      <form method="POST" action="{% url 'used_packaging_create' %}" id="subtractPackagingForm" onsubmit="return validatePackagingSubtraction();">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="subtractPassword">Password:</label>
+          <input type="password" id="subtractPassword" name="password" required>
+        </div>
+        <!-- Dropdown for batch code with each option including data-date-delivered -->
+        <div class="form-group">
+          <label for="id_PackagingRawMaterialBatchCode">Packaging Batch Code:</label>
+          <select id="id_PackagingRawMaterialBatchCode" name="PackagingRawMaterialBatchCode" required>
+            {% for material in materials %}
+            <option value="{{ material.PackagingBatchCode }}" data-date-delivered="{{ material.DateDelivered|date:'Y-m-d' }}">
+              {{ material.PackagingBatchCode }} - {{ material.RawMaterialName }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="id_QuanityUsed">Quantity Used:</label>
+          <input type="number" id="id_QuanityUsed" name="QuanityUsed" min="1" required>
+        </div>
+        <div class="form-group">
+          <label for="id_UseCategory">Use Category:</label>
+          <select id="id_UseCategory" name="UseCategory" required>
+            <option value="WBC">WBC</option>
+            <option value="GGB">GGB</option>
+            <option value="Both">Both</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="id_DateUsed">Date Used:</label>
+          <input type="date" id="id_DateUsed" name="DateUsed" required>
+        </div>
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('subtractPackagingModal')">Discard</button>
+          <button type="submit" class="update-button">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5) Used Packaging History Modal -->
+  <div id="usedPackagingHistoryModal" class="modal">
+    <div class="modal-content" style="width: 90%; max-width: 1000px;">
+      <div class="modal-header">
+        <h2>Used Packaging History</h2>
+        <span class="close" onclick="closeModal('usedPackagingHistoryModal')">&times;</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Packaging Material</th>
+              <th>Used Batch Code</th>
+              <th>Quantity Used</th>
+              <th>Use Category</th>
+              <th>Date Used</th>
+              <th>Options</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for up in used_packs %}
+            <tr>
+              <td>{{ up.RawMaterialName }}</td>
+              <td>{{ up.USEDPackagingBatchCode }}</td>
+              <td>{{ up.QuanityUsed }}</td>
+              <td>{{ up.UseCategory }}</td>
+              <td>{{ up.DateUsed|date:"d/m/Y" }}</td>
+              <td>
+                <button class="button-outline" onclick="openDeleteModalUsedPack('{{ up.USEDPackagingBatchCode }}','{{ up.RawMaterialName }}')">Delete</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">No Used Packaging Records Found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6) Update Used Packaging Modal -->
+  <div id="updateUsedPackagingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Update Used Packaging Entry (Code: <span id="modalUsedPackagingBatchCode"></span>)</h2>
+        <span class="close" onclick="closeModal('updateUsedPackagingModal')">&times;</span>
+      </div>
+      <form method="POST" id="updateUsedPackagingForm" onsubmit="return confirm('Are you sure you want to update this record?');">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="updateUsedPassword">Password:</label>
+          <input type="password" id="updateUsedPassword" name="password" required>
+        </div>
+        <input type="hidden" name="USEDPackagingBatchCode" id="modalUsedPackagingBatchCodeHidden" value="">
+        <div class="form-group">
+          <label for="updateUsedRawMaterialName">Raw Material Name</label>
+          <input type="text" id="updateUsedRawMaterialName" name="RawMaterialName" readonly>
+        </div>
+        <div class="form-group">
+          <label for="updateQuanityUsed">Quantity Used</label>
+          <input type="number" id="updateQuanityUsed" name="QuanityUsed" min="0">
+        </div>
+        <div class="form-group">
+          <label for="updateUsedUseCategory">Use Category</label>
+          <select id="updateUsedUseCategory" name="UseCategory">
+            <option value="WBC">WBC</option>
+            <option value="GGB">GGB</option>
+            <option value="Both">Both</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="updateUsedDateUsed">Date Used</label>
+          <input type="date" id="updateUsedDateUsed" name="DateUsed">
+        </div>
+        <div class="button-container">
+          <button type="submit" class="update-button">Update</button>
+          <button type="button" class="button-outline" onclick="closeModal('updateUsedPackagingModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7) Delete Used Packaging Modal -->
+  <div id="deleteUsedPackagingModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Delete Used Packaging Entry</h2>
+        <span class="close" onclick="closeModal('deleteUsedPackagingModal')">&times;</span>
+      </div>
+      <p id="deleteUsedPackagingMessage">Are you sure you want to delete this used packaging entry?</p>
+      <form method="POST" id="deleteUsedPackagingForm" onsubmit="return confirm('Are you sure you want to delete this record?');">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="deletePassword">Password:</label>
+          <input type="password" id="deletePassword" name="password" required>
+        </div>
+        <div class="button-container">
+          <button type="submit" class="update-button">Delete</button>
+          <button type="button" class="button-outline" onclick="closeModal('deleteUsedPackagingModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT -->
+  <script>
+    function openModal(id) {
+      document.getElementById(id).style.display = "flex";
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = "none";
+    }
+    function formatDateToISO(dateStr) {
+      if (!dateStr) return "";
+      let parts = dateStr.split(" ");
+      if (parts.length !== 3) return "";
+      let monthAbbr = parts[0].replace(".", "");
+      let day = parts[1].replace(",", "");
+      let year = parts[2];
+      const monthMap = {
+          'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+          'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+          'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+      };
+      let monthNumber = monthMap[monthAbbr];
+      day = day.padStart(2, '0');
+      return `${year}-${monthNumber}-${day}`;
+    }
+    // Update Ingredient Modal
+    function openUpdateModalIngredient(rawMaterialBatchCode, supplierCode, rawMaterialName, dateDelivered, quantityBought, quantityLeft, useCategory, expirationDate, status, cost) {
+      let rawMaterialRow = document.querySelector(`[data-raw-material-code='${rawMaterialBatchCode}']`);
+      if (!rawMaterialRow) {
+          alert("Error: Raw Material not found.");
+          return;
+      }
+      let pk = rawMaterialRow.getAttribute("data-raw-material-pk");
+      let formattedDateDelivered = formatDateToISO(dateDelivered);
+      let formattedExpirationDate = formatDateToISO(expirationDate);
+      document.getElementById("modalRawMaterialBatchCode").textContent = rawMaterialBatchCode;
+      document.getElementById("modalRawMaterialBatchCodeHidden").value = rawMaterialBatchCode;
+      document.getElementById("modalSupplierCodeHidden").value = supplierCode;
+      document.getElementById("modalRawMaterialName").value = rawMaterialName;
+      document.getElementById("modalDateDelivered").value = formattedDateDelivered;
+      document.getElementById("modalQuantityBought").value = quantityBought;
+      document.getElementById("modalQuantityLeft").value = quantityLeft;
+      // Compute used amount from original data: used = QuantityBought - QuantityLeft
+      var used = parseFloat(quantityBought) - parseFloat(quantityLeft);
+      document.getElementById("modalUsed").value = used;
+      // Set the appropriate radio button for Use Category
+      if (useCategory === "WBC") {
+         document.getElementById("useCategoryWBC").checked = true;
+      } else if (useCategory === "GGB") {
+         document.getElementById("useCategoryGGB").checked = true;
+      } else if (useCategory === "Both") {
+         document.getElementById("useCategoryBoth").checked = true;
+      }
+      document.getElementById("modalExpirationDate").value = formattedExpirationDate;
+      document.getElementById("modalStatus").value = status;
+      document.getElementById("modalCost").value = cost;
+      // Populate supplier dropdown for ingredients
+      fetch('/api/suppliers/ingredients')
+          .then(response => response.json())
+          .then(data => {
+              let supplierSelect = document.getElementById("modalSupplierCode");
+              supplierSelect.innerHTML = '<option value="">Select a Supplier</option>';
+              data.suppliers.forEach(supplier => {
+                  let option = document.createElement("option");
+                  option.value = supplier.SupplierCode;
+                  option.textContent = supplier.SupplierName;
+                  if (supplier.SupplierCode === supplierCode) {
+                      option.selected = true;
+                  }
+                  supplierSelect.appendChild(option);
+              });
+          })
+          .catch(error => console.error('Error fetching suppliers:', error));
+      openModal("updateIngredientModal");
+    }
+    function validateIngredientUpdate() {
+      var qb = parseFloat(document.getElementById("modalQuantityBought").value) || 0;
+      var ql = parseFloat(document.getElementById("modalQuantityLeft").value) || 0;
+      var used = parseFloat(document.getElementById("modalUsed").value) || 0;
+      // Expected: Quantity Left must equal Quantity Bought minus the used amount.
+      if (Math.abs(ql - (qb - used)) > 0.001) {
+        alert("Error: Quantity Left must equal Quantity Bought minus the used quantity (" + used + ").");
+        return false;
+      }
+      return true;
+    }
+    function openDeleteModalIngredient(pk, batchCode, name) {
+      document.getElementById('deleteIngredientMessage').textContent = `Are you sure you want to delete "${name}"?`;
+      document.getElementById('deleteIngredientForm').action = `/ingredients/delete/${pk}/`;
+      openModal('deleteIngredientModal');
+    }
+    function openDeleteModalUsedIngredient(usedBatchCode, name) {
+      document.getElementById('deleteUsedIngredientMessage').textContent = `Are you sure you want to delete the used ingredient entry for "${name}"?`;
+      document.getElementById('deleteUsedIngredientForm').action = `/used-ingredients/delete/${usedBatchCode}/`;
+      openModal('deleteUsedIngredientModal');
+    }
+    // Update Packaging Modal
+    function openUpdateModalPackaging(packagingBatchCode, rawMaterialName, containerSize, dateDelivered, qtyBought, qtyLeft, useCategory, cost, supplierCode) {
+      let packagingRow = document.querySelector(`[data-packaging-code='${packagingBatchCode}']`);
+      if (!packagingRow) {
+          alert("Error: Packaging material not found.");
+          return;
+      }
+      let pk = packagingRow.getAttribute("data-packaging-pk");
+      let formattedDateDelivered = formatDateToISO(dateDelivered);
+      document.getElementById("modalPackagingBatchCode").textContent = packagingBatchCode;
+      document.getElementById("modalPackagingBatchCodeHidden").value = packagingBatchCode;
+      document.getElementById('RawMaterialName').value = rawMaterialName;
+      document.getElementById('ContainerSize').value = containerSize;
+      document.getElementById('DateDelivered').value = formattedDateDelivered;
+      document.getElementById('QuantityBought').value = qtyBought;
+      document.getElementById('QuantityLeft').value = qtyLeft;
+      // Compute used quantity for packaging: used = QuantityBought - QuantityLeft
+      var used = parseFloat(qtyBought) - parseFloat(qtyLeft);
+      document.getElementById("modalUsedPackaging").value = used;
+      // Set radio buttons for packaging Use Category
+      if (useCategory === "WBC") {
+         document.getElementById("packUseCategoryWBC").checked = true;
+      } else if (useCategory === "GGB") {
+         document.getElementById("packUseCategoryGGB").checked = true;
+      } else if (useCategory === "Both") {
+         document.getElementById("packUseCategoryBoth").checked = true;
+      }
+      document.getElementById('Cost').value = cost;
+      document.getElementById('modalSupplierCodeHidden').value = supplierCode;
+      // Populate supplier dropdown for packaging using the appropriate API
+      fetch('/api/suppliers/packaging')
+          .then(response => response.json())
+          .then(data => {
+              let supplierSelect = document.getElementById("modalSupplierCode");
+              supplierSelect.innerHTML = '<option value="">Select a Supplier</option>';
+              data.suppliers.forEach(supplier => {
+                  let option = document.createElement("option");
+                  option.value = supplier.SupplierCode;
+                  option.textContent = supplier.SupplierName;
+                  if (supplier.SupplierCode === supplierCode) {
+                      option.selected = true;
+                  }
+                  supplierSelect.appendChild(option);
+              });
+          })
+          .catch(error => console.error('Error fetching suppliers:', error));
+      openModal("updatePackagingModal");
+    }
+    function validatePackagingUpdate() {
+      var qb = parseFloat(document.getElementById("QuantityBought").value) || 0;
+      var ql = parseFloat(document.getElementById("QuantityLeft").value) || 0;
+      var used = parseFloat(document.getElementById("modalUsedPackaging").value) || 0;
+      // For packaging: Quantity Left must equal Quantity Bought minus used
+      if (Math.abs(ql - (qb - used)) > 0.001) {
+         alert("Error: For packaging, Quantity Left must equal Quantity Bought minus the used quantity (" + used + ").");
+         return false;
+      }
+      return true;
+    }
+    function openDeleteModalPackaging(pk, batchCode, name) {
+      document.getElementById('deletePackagingMessage').textContent = `Are you sure you want to delete "${name}"?`;
+      document.getElementById('deletePackagingForm').action = `/packaging/delete/${pk}/`;
+      openModal('deletePackagingModal');
+    }
+    function openDeleteModalUsedPack(pk, name) {
+      document.getElementById('deleteUsedPackagingMessage').textContent = `Are you sure you want to delete the used packaging entry for "${name}"?`;
+      document.getElementById('deleteUsedPackagingForm').action = `/used-packaging/delete/${pk}/`;
+      openModal('deleteUsedPackagingModal');
+    }
+    // Validate subtract packaging modal: Date Used must not be before Date Delivered.
+    function validatePackagingSubtraction() {
+      var dateUsed = document.getElementById("id_DateUsed").value;
+      var select = document.getElementById("id_PackagingRawMaterialBatchCode");
+      var selectedOption = select.options[select.selectedIndex];
+      var dateDelivered = selectedOption.getAttribute("data-date-delivered");
+      if (dateUsed && dateDelivered && dateUsed < dateDelivered) {
+        alert("Date Used cannot be before the Date Delivered (" + dateDelivered + ").");
+        return false;
+      }
+      return true;
+    }
+    window.onclick = function(e) {
+      const modals = ['usedIngredientsHistoryModal','addIngredientModal','subtractIngredientModal','updateIngredientModal','deleteIngredientModal','deleteUsedIngredientModal','addPackagingModal','updatePackagingModal','deletePackagingModal','subtractPackagingModal','usedPackagingHistoryModal','updateUsedPackagingModal','deleteUsedPackagingModal'];
+      modals.forEach(function(id) {
+        const modal = document.getElementById(id);
+        if (e.target === modal) {
+          closeModal(id);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

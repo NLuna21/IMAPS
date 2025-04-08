@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Report Summary</title>
+  <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="{% static 'IMAPS_app/images/logo.png' %}" alt="Glow Glass Logo">
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item">
+        <a href="{% url 'packaging_list' %}">
+          <span class="icon">📦</span>
+          <span class="text">Packaging Materials</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'ingredients_list' %}">
+          <span class="icon">🌿</span>
+          <span class="text">Ingredients</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'suppliers_list' %}">
+          <span class="icon">🏭</span>
+          <span class="text">Suppliers</span>
+        </a>
+      </li>
+      <li class="nav-item active">
+        <a href="{% url 'report_summary' %}">
+          <span class="icon">📊</span>
+          <span class="text">Generate Report</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <h1>Report Summary</h1>
+    <form method="GET">
+      <label>Generate report for period:</label>
+      <input type="date" name="start_date" value="{{ start_date|default_if_none:'' }}">
+      <input type="date" name="end_date" value="{{ end_date|default_if_none:'' }}">
+      <button type="submit" class="update-button">Generate</button>
+    </form>
+    <hr>
+    {% if start_date and end_date %}
+      <h2>Report for period: {{ start_date }} - {{ end_date }}</h2>
+
+      <h3>Ingredients Usage</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Total Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ing in used_ing %}
+          <tr>
+            <td>{{ ing.RawMaterialName }}</td>
+            <td>{{ ing.total_used }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2">No usage found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>Packaging Material Usage</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Packaging Material</th>
+            <th>Total Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pack in used_pack %}
+          <tr>
+            <td>{{ pack.RawMaterialName }}</td>
+            <td>{{ pack.total_used }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2">No usage found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Please select a start date and end date, then click "Generate".</p>
+    {% endif %}
+  </div>
+</body>
+</html>

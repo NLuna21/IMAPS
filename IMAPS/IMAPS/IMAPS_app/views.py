@@ -1,0 +1,399 @@
+# IMAPS_app/views.py
+
+from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Sum
+from django.contrib import messages
+from .models import (
+    Supplier,
+    IngredientsRawMaterials,
+    PackagingRawMaterials,
+    UsedIngredient,
+    UsedPackaging
+)
+from .forms import (
+    SupplierForm,
+    IngredientsRawMaterialsForm,
+    PackagingRawMaterialsForm,
+    UsedIngredientForm,
+    UsedPackagingForm,
+    # New update forms that include fields that were previously excluded:
+    IngredientsRawMaterialsUpdateForm,
+    PackagingRawMaterialsUpdateForm
+)
+
+PASSWORD = "test123"
+
+#####################
+#      SUPPLIERS    #
+#####################
+def suppliers_list(request):
+    suppliers = Supplier.objects.all()
+    create_form = SupplierForm()
+    return render(request, 'suppliers.html', {
+        'suppliers': suppliers,
+        'create_form': create_form,
+    })
+
+def supplier_create(request):
+    if request.method == 'POST':
+        form = SupplierForm(request.POST)
+        if form.is_valid():
+            form.save()
+        else:
+            messages.error(request, "Supplier creation error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('suppliers_list')
+
+def supplier_update(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        form = SupplierForm(request.POST, instance=supplier)
+        if form.is_valid():
+            form.save()
+        else:
+            messages.error(request, "Supplier update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('suppliers_list')
+
+def supplier_delete(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        supplier.delete()
+    return redirect('suppliers_list')
+
+##########################
+#  INGREDIENTS RAW MATERIALS  #
+##########################
+def ingredients_list(request):
+    ingredients = IngredientsRawMaterials.objects.all()
+    used_ings = UsedIngredient.objects.all()
+    create_form = IngredientsRawMaterialsForm()
+    used_ing_create_form = UsedIngredientForm()
+    context = {
+        'ingredients': ingredients,
+        'used_ings': used_ings,
+        'create_form': create_form,
+        'used_ing_create_form': used_ing_create_form,
+    }
+    return render(request, 'ingredients.html', context)
+
+
+def ingredients_create(request):
+    if request.method == 'POST':
+        form = IngredientsRawMaterialsForm(request.POST)
+        if form.is_valid():
+            existing_batch = form.cleaned_data.get('existing_batch')
+            quantity_bought = form.cleaned_data.get('QuantityBought')
+            if existing_batch and existing_batch != 'None':
+                try:
+                    # Get the existing record (assumed to be unique by batch code)
+                    existing_record = IngredientsRawMaterials.objects.get(RawMaterialBatchCode=existing_batch)
+                    
+                    # Create a new record but don’t save yet:
+                    new_record = form.save(commit=False)
+                    # The new record’s QuantityLeft should be just its own QuantityBought
+                    # before combining; then we compute the new total:
+                    new_record.QuantityLeft = new_record.QuantityBought
+                    new_record.save()
+                    
+                    # Now compute the combined quantity left:
+                    combined = existing_record.QuantityLeft + new_record.QuantityLeft
+                    # Update both records to show the same combined total.
+                    existing_record.QuantityLeft = combined
+                    existing_record.save()
+                    
+                    new_record.QuantityLeft = combined
+                    new_record.save()
+                except IngredientsRawMaterials.DoesNotExist:
+                    form.save()
+            else:
+                form.save()
+        else:
+            messages.error(request, "Ingredient creation error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+            pass
+    return redirect('ingredients_list')
+
+def ingredients_update(request, pk):
+    # Use an update form that includes QuantityLeft
+    ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        # Use the dedicated update form for ingredients.
+        form = IngredientsRawMaterialsUpdateForm(request.POST, instance=ingredient)
+        if form.is_valid():
+            form.save()
+        else:
+            messages.error(request, "Ingredient update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('ingredients_list')
+
+def ingredients_delete(request, pk):
+    ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        ingredient.delete()
+    return redirect('ingredients_list')
+
+
+
+def used_ingredients_create(request):
+    if request.method == 'POST':
+        form = UsedIngredientForm(request.POST)
+        if form.is_valid():
+            used_ing = form.save()
+            # Get all ingredient records for the same raw material name.
+            qs = IngredientsRawMaterials.objects.filter(RawMaterialName=used_ing.RawMaterialName)
+            total_left = sum(record.QuantityLeft for record in qs)
+            new_total = total_left - used_ing.QuantityUsed
+            if new_total < 0:
+                new_total = 0
+            # Update all records with this new total so they show the same remaining balance.
+            for record in qs:
+                record.QuantityLeft = new_total
+                record.save()
+        else:
+            messages.error(request, "Used ingredient creation error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+            pass
+    return redirect('ingredients_list')
+
+def ingredients_create(request):
+    if request.method == 'POST':
+        form = IngredientsRawMaterialsForm(request.POST)
+        if form.is_valid():
+            existing_batch = form.cleaned_data.get('existing_batch')
+            quantity_bought = form.cleaned_data.get('QuantityBought')
+            # If an existing batch is selected...
+            if existing_batch and existing_batch != 'None':
+                try:
+                    # Retrieve the existing ingredient record by its batch code.
+                    existing_record = IngredientsRawMaterials.objects.get(RawMaterialBatchCode=existing_batch)
+                    
+                    # Create a new ingredient record from the form without saving immediately.
+                    new_record = form.save(commit=False)
+                    # Override these fields with those from the existing record.
+                    new_record.RawMaterialName = existing_record.RawMaterialName
+                    new_record.UseCategory = existing_record.UseCategory
+                    # Set the new record's QuantityLeft to be its own QuantityBought initially.
+                    new_record.QuantityLeft = new_record.QuantityBought
+                    new_record.save()
+                    
+                    # Now compute the combined quantity left.
+                    combined_quantity = existing_record.QuantityLeft + new_record.QuantityLeft
+                    
+                    # Update the existing record to have the combined QuantityLeft.
+                    existing_record.QuantityLeft = combined_quantity
+                    existing_record.save()
+                    
+                    # Also update the new record so that its QuantityLeft matches.
+                    new_record.QuantityLeft = combined_quantity
+                    new_record.save()
+                except IngredientsRawMaterials.DoesNotExist:
+                    form.save()
+            else:
+                form.save()
+        else:
+            messages.error(request, "Used ingredient creation error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('ingredients_list')
+
+def used_ingredients_update(request, pk):
+    used_ing = get_object_or_404(UsedIngredient, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        form = UsedIngredientForm(request.POST, instance=used_ing)
+        if form.is_valid():
+            form.save()
+        else:
+            messages.error(request, "Used ingredient update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('ingredients_list')
+
+def used_ingredients_delete(request, pk):
+    used_ing = get_object_or_404(UsedIngredient, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        ingredient = used_ing.IngredientRawMaterialBatchCode
+        ingredient.QuantityLeft += used_ing.QuantityUsed
+        ingredient.save()
+        used_ing.delete()
+    return redirect('ingredients_list')
+
+##############################
+#  PACKAGING RAW MATERIALS  #
+##############################
+def packaging_list(request):
+    materials = PackagingRawMaterials.objects.all()
+    used_packs = UsedPackaging.objects.all()
+    create_form = PackagingRawMaterialsForm()
+    used_pack_create_form = UsedPackagingForm()
+    context = {
+        'materials': materials,
+        'used_packs': used_packs,
+        'create_form': create_form,
+        'used_pack_create_form': used_pack_create_form,
+    }
+    return render(request, 'packaging.html', context)
+
+
+
+def packaging_create(request):
+    if request.method == 'POST':
+        form = PackagingRawMaterialsForm(request.POST)
+        if form.is_valid():
+            existing_batch = form.cleaned_data.get('existing_batch')
+            quantity_bought = form.cleaned_data.get('QuantityBought')
+            if existing_batch and existing_batch != 'None':
+                try:
+                    # Get the existing packaging record by its batch code.
+                    existing_record = PackagingRawMaterials.objects.get(PackagingBatchCode=existing_batch)
+                    
+                    # Create a new record from the form but do not save yet.
+                    new_record = form.save(commit=False)
+                    
+                    # Override the following fields with the values from the existing record.
+                    new_record.ContainerSize = existing_record.ContainerSize
+                    new_record.RawMaterialName = existing_record.RawMaterialName
+                    new_record.UseCategory = existing_record.UseCategory
+                    # Ensure the new record's QuantityLeft starts as its own QuantityBought.
+                    new_record.QuantityLeft = new_record.QuantityBought
+                    new_record.save()
+                    
+                    # Calculate the combined available quantity.
+                    combined_quantity = existing_record.QuantityLeft + new_record.QuantityLeft
+                    # Update both records to share the new combined quantity.
+                    existing_record.QuantityLeft = combined_quantity
+                    existing_record.save()
+                    
+                    new_record.QuantityLeft = combined_quantity
+                    new_record.save()
+                except PackagingRawMaterials.DoesNotExist:
+                    form.save()
+            else:
+                form.save()
+        else:
+            messages.error(request, "Packaging creation error: " +
+            "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+            pass
+    return redirect('packaging_list')
+
+def packaging_update(request, pk):
+    # Use a dedicated update form for packaging that includes QuantityLeft.
+    material = get_object_or_404(PackagingRawMaterials, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        form = PackagingRawMaterialsUpdateForm(request.POST, instance=material)
+        if form.is_valid():
+            form.save()
+        else:
+            messages.error(request, "Packaging update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('packaging_list')
+
+def packaging_delete(request, pk):
+    material = get_object_or_404(PackagingRawMaterials, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        material.delete()
+    return redirect('packaging_list')
+
+
+def used_packaging_create(request):
+    if request.method == 'POST':
+        form = UsedPackagingForm(request.POST)
+        if form.is_valid():
+            used_pack = form.save()
+            # Find all packaging records with the same RawMaterialName.
+            qs = PackagingRawMaterials.objects.filter(RawMaterialName=used_pack.RawMaterialName)
+            total_left = sum(record.QuantityLeft for record in qs)
+            new_total = total_left - used_pack.QuanityUsed
+            if new_total < 0:
+                new_total = 0
+            # Update all records with the new combined quantity left.
+            for record in qs:
+                record.QuantityLeft = new_total
+                record.save()
+        else:
+            messages.error(request, "Used packaging creation error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+            pass
+    return redirect('packaging_list')
+
+def used_packaging_update(request, pk):
+    used_pack = get_object_or_404(UsedPackaging, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        form = UsedPackagingForm(request.POST, instance=used_pack)
+        if form.is_valid():
+            form.save()
+        else:
+            messages.error(request, "Used packaging update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('packaging_list')
+
+def used_packaging_delete(request, pk):
+    used_pack = get_object_or_404(UsedPackaging, pk=pk)
+    if request.method == 'POST':
+        if request.POST.get('password') != PASSWORD:
+            return HttpResponse("Incorrect password", status=403)
+        packaging = used_pack.PackagingRawMaterialBatchCode
+        packaging.QuantityLeft += used_pack.QuanityUsed
+        packaging.save()
+        used_pack.delete()
+    return redirect('packaging_list')
+
+##########################
+#     REPORT SUMMARY      #
+##########################
+def report_summary(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    used_ing = []
+    used_pack = []
+    exp_ing = []
+    if start_date and end_date:
+        used_ing = (UsedIngredient.objects
+                    .filter(DateUsed__range=[start_date, end_date])
+                    .values('RawMaterialName')
+                    .annotate(total_used=Sum('QuantityUsed')))
+        used_pack = (UsedPackaging.objects
+                     .filter(DateUsed__range=[start_date, end_date])
+                     .values('RawMaterialName')
+                     .annotate(total_used=Sum('QuanityUsed')))
+        exp_ing = (IngredientsRawMaterials.objects
+                     .filter(DateUsed__range=[start_date, end_date])
+                     .filter(ExpirationDate__gte=start_date)
+                     .values('RawMaterialName')
+                     .annotate(total_used=Sum('QuantityLeft')))
+    return render(request, 'report_summary.html', {
+        'used_ing': used_ing,
+        'used_pack': used_pack,
+        'exp_ing': exp_ing,
+        'start_date': start_date,
+        'end_date': end_date,
+    })
+
+def supplier_list_packaging(request):
+    suppliers = Supplier.objects.filter(
+        Category__in=['Packaging', 'Both']
+    ).values('SupplierCode', 'SupplierName')
+    return JsonResponse({'suppliers': list(suppliers)}, safe=False)
+
+def supplier_list_ingredients(request):
+    suppliers = Supplier.objects.filter(
+        Category__in=['Ingredient', 'Both']
+    ).values('SupplierCode', 'SupplierName')
+    return JsonResponse({'suppliers': list(suppliers)}, safe=False)

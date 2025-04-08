@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingredients Inventory</title>
+  <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Right-align specific numeric columns */
+    table tbody td {
+      text-align: left;
+    }
+    table tbody td:nth-child(3),
+    table tbody td:nth-child(4),
+    table tbody td:nth-child(9) {
+      text-align: right;
+    }
+    /* Spacing for form groups in modals */
+    .modal-content .form-group {
+      margin-bottom: 20px;
+    }
+    /* Basic styling for alert messages */
+    .alert {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #f5c6cb;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="{% static 'IMAPS_app/images/logo.png' %}" alt="Glow Glass Logo">
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item">
+        <a href="{% url 'packaging_list' %}">
+          <span class="icon">📦</span>
+          <span class="text">Packaging Materials</span>
+        </a>
+      </li>
+      <li class="nav-item active">
+        <a href="{% url 'ingredients_list' %}">
+          <span class="icon">🌿</span>
+          <span class="text">Ingredients</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'suppliers_list' %}">
+          <span class="icon">🏭</span>
+          <span class="text">Suppliers</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'report_summary' %}">
+          <span class="icon">📊</span>
+          <span class="text">Generate Report</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <h1>Ingredients Inventory</h1>
+    <!-- Messages Block -->
+    {% if messages %}
+      <div id="messages">
+        {% for message in messages %}
+          <div class="alert">
+             {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="button-container">
+      <button class="button-outline" onclick="openModal('usedIngredientsHistoryModal')">History of Used Ingredients</button>
+      <button class="button-outline" onclick="openModal('addIngredientModal')">+ Add Ingredient</button>
+      <button class="button-outline" onclick="openModal('subtractIngredientModal')">Subtract Materials</button>
+      <button class="import-button">Import Data</button>
+    </div>
+
+    <!-- Ingredients Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr class="table-header">
+            <th class="pagination" colspan="6">
+              Page 1/20
+              <button class="pageButton">&lt;</button>
+              <button class="pageButton">&gt;</button>
+            </th>
+            <th class="search-bar-container" colspan="5">
+              <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search Ingredients...">
+                <button class="menu-button">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M3 12h18M3 6h18M3 18h18" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </th>
+          </tr>
+          <tr>
+            <th>Ingredient Name</th>
+            <th>Batch Code</th>
+            <th>Quantity Bought (g,grams)</th>
+            <th>Quantity Left</th>
+            <th>Supplier</th>
+            <th>Date Delivered</th>
+            <th>Use Category</th>
+            <th>Expiration Date</th>
+            <th>Cost</th>
+            <th>Status</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ing in ingredients %}
+          <tr data-raw-material-code="{{ ing.RawMaterialBatchCode }}" data-raw-material-pk="{{ ing.id }}">
+            <td>{{ ing.RawMaterialName }}</td>
+            <td>{{ ing.RawMaterialBatchCode }}</td>
+            <td>{{ ing.QuantityBought }}</td>
+            <td>{{ ing.QuantityLeft }}</td>
+            <td>{{ ing.SupplierCode }}</td>
+            <td>{{ ing.DateDelivered|date:"d/m/Y" }}</td>
+            <td>{{ ing.UseCategory }}</td>
+            <td>{{ ing.ExpirationDate|date:"d/m/Y" }}</td>
+            <td> {{ing.Cost}}</td>
+            <td>
+              {% if ing.Status == "Expiring" %}
+                <span class="status-pill red">Expiring</span>
+              {% elif ing.Status == "Low Inventory" %}
+                <span class="status-pill red">Low Inventory</span>
+              {% else %}
+                <span class="status-pill green">{{ ing.Status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <button class="update-button" onclick="openUpdateModalIngredient('{{ ing.RawMaterialBatchCode }}','{{ ing.SupplierCode }}','{{ ing.RawMaterialName }}','{{ ing.DateDelivered }}','{{ ing.QuantityBought }}','{{ ing.QuantityLeft }}','{{ ing.UseCategory }}','{{ ing.ExpirationDate }}','{{ ing.Status }}','{{ ing.Cost }}')">Update</button>
+              <button class="button-outline" onclick="openDeleteModalIngredient('{{ ing.id }}','{{ ing.RawMaterialBatchCode }}','{{ ing.RawMaterialName }}')">Delete</button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10">No Ingredients Found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============= INGREDIENT MODALS ============= -->
+
+  <!-- 1) Used Ingredients History Modal -->
+  <div id="usedIngredientsHistoryModal" class="modal">
+    <div class="modal-content" style="width: 90%; max-width: 1000px;">
+      <div class="modal-header">
+        <h2>History of Used Ingredients</h2>
+        <span class="close" onclick="closeModal('usedIngredientsHistoryModal')">&times;</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Ingredient Name</th>
+              <th>Batch Code</th>
+              <th>Quantity Used (g,grams)</th>
+              <th>Use Category</th>
+              <th>Date Used</th>
+              <th>Options</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for used in used_ings %}
+            <tr data-used-batch-code="{{ used.UsedIngredientBatchCode }}">
+              <td>{{ used.RawMaterialName }}</td>
+              <td>{{ used.UsedIngredientBatchCode }}</td>
+              <td>{{ used.QuantityUsed }}</td>
+              <td>{{ used.UseCategory }}</td>
+              <td>{{ used.DateUsed|date:"d/m/Y" }}</td>
+              <td>
+                <button class="button-outline" onclick="openDeleteModalUsedIngredient('{{ used.UsedIngredientBatchCode }}','{{ used.RawMaterialName }}')">Delete</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">No used ingredients found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2) Add Ingredient Modal -->
+  <div id="addIngredientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add Ingredient</h2>
+        <span class="close" onclick="closeModal('addIngredientModal')">&times;</span>
+      </div>
+      <form method="POST" action="{% url 'ingredients_create' %}">
+        {% csrf_token %}
+        {{ create_form.as_p }}
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('addIngredientModal')">Discard</button>
+          <button type="submit" class="update-button">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3) Subtract Ingredients Modal -->
+  <div id="subtractIngredientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Subtract Ingredients Materials</h2>
+        <span class="close" onclick="closeModal('subtractIngredientModal')">&times;</span>
+      </div>
+      <form method="POST" action="{% url 'used_ingredients_create' %}">
+        {% csrf_token %}
+        {{ used_ing_create_form.as_p }}
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('subtractIngredientModal')">Discard</button>
+          <button type="submit" class="update-button">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4) Update Ingredient Modal -->
+  <div id="updateIngredientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Update Ingredients (Code: <span id="modalRawMaterialBatchCode"></span>)</h2>
+        <span class="close" onclick="closeModal('updateIngredientModal')">&times;</span>
+      </div>
+      <form method="POST" id="updateIngredientForm" onsubmit="return validateIngredientUpdate();">
+        {% csrf_token %}
+        <input type="hidden" name="RawMaterialBatchCode" id="modalRawMaterialBatchCodeHidden" value="">
+        <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden" value="">
+        <!-- Hidden used value: computed as (Quantity Bought - Quantity Left) -->
+        <input type="hidden" id="modalUsed" name="used" value="">
+        
+        <label>Ingredient Name:</label>
+        <input type="text" name="RawMaterialName" id="modalRawMaterialName" required>
+        
+        <label>Date Delivered:</label>
+        <input type="date" name="DateDelivered" id="modalDateDelivered" required>
+        
+        <label>Quantity Bought:</label>
+        <input type="number" step="any" name="QuantityBought" id="modalQuantityBought" required>
+        
+        <label>Quantity Left:</label>
+        <input type="number" step="any" name="QuantityLeft" id="modalQuantityLeft" required>
+        
+        <label for="modalSupplierCode">Supplier:</label>
+        <select id="modalSupplierCode" name="SupplierCode">
+          <option value="">Select a Supplier</option>
+          <!-- Options populated dynamically -->
+        </select>
+        
+        <label>Use Category:</label>
+        <div id="modalUseCategoryRadios">
+          <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC">
+          <label for="useCategoryWBC">WBC</label>
+          <input type="radio" name="UseCategory" value="GGB" id="useCategoryGGB">
+          <label for="useCategoryGGB">GGB</label>
+          <input type="radio" name="UseCategory" value="Both" id="useCategoryBoth">
+          <label for="useCategoryBoth">Both</label>
+        </div>
+        
+        <label>Expiration Date:</label>
+        <input type="date" name="ExpirationDate" id="modalExpirationDate" required>
+        
+        <label>Status:</label>
+        <input type="text" name="Status" id="modalStatus" readonly>
+        
+        <label>Cost:</label>
+        <input type="number" step="any" name="Cost" id="modalCost" required>
+        
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('updateIngredientModal')">Discard</button>
+          <button type="submit" class="update-button">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- 5) Delete Ingredient Modal -->
+  <div id="deleteIngredientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Delete Ingredient</h2>
+        <span class="close" onclick="closeModal('deleteIngredientModal')">&times;</span>
+      </div>
+      <p id="deleteIngredientMessage">Are you sure you want to delete this ingredient?</p>
+      <form method="POST" id="deleteIngredientForm">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="deleteUsedPassword">Password:</label>
+          <input type="password" id="deleteUsedPassword" name="password" required>
+        </div>
+        <div class="button-container">
+          <button type="submit" class="update-button">Delete</button>
+          <button type="button" class="button-outline" onclick="closeModal('deleteIngredientModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6) Delete Used Ingredient Modal -->
+  <div id="deleteUsedIngredientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Delete Used Ingredient Entry</h2>
+        <span class="close" onclick="closeModal('deleteUsedIngredientModal')">&times;</span>
+      </div>
+      <p id="deleteUsedIngredientMessage">Are you sure you want to delete this used ingredient entry?</p>
+      <form method="POST" id="deleteUsedIngredientForm">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="deleteUsedPassword">Password:</label>
+          <input type="password" id="deleteUsedPassword" name="password" required>
+        </div>
+        <div class="button-container">
+          <button type="submit" class="update-button">Delete</button>
+          <button type="button" class="button-outline" onclick="closeModal('deleteUsedIngredientModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT -->
+  <script>
+    // Modal open/close functions
+    function openModal(id) {
+      document.getElementById(id).style.display = "flex";
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = "none";
+    }
+    // Utility function for formatting a date string to ISO (yyyy-mm-dd)
+    function formatDateToISO(dateStr) {
+      if (!dateStr) return "";
+      let parts = dateStr.split(" ");
+      if (parts.length !== 3) return "";
+      let monthAbbr = parts[0].replace(".", "");
+      let day = parts[1].replace(",", "");
+      let year = parts[2];
+      const monthMap = {
+          'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+          'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+          'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+      };
+      let monthNumber = monthMap[monthAbbr];
+      day = day.padStart(2, '0');
+      return `${year}-${monthNumber}-${day}`;
+    }
+    
+    // Update Ingredient Modal functions
+    function openUpdateModalIngredient(rawMaterialBatchCode, supplierCode, rawMaterialName, dateDelivered, quantityBought, quantityLeft, useCategory, expirationDate, status, cost) {
+      let rawMaterialRow = document.querySelector(`[data-raw-material-code='${rawMaterialBatchCode}']`);
+      if (!rawMaterialRow) {
+          alert("Error: Raw Material not found.");
+          return;
+      }
+      let pk = rawMaterialRow.getAttribute("data-raw-material-pk");
+      let formattedDateDelivered = formatDateToISO(dateDelivered);
+      let formattedExpirationDate = formatDateToISO(expirationDate);
+      
+      document.getElementById("modalRawMaterialBatchCode").textContent = rawMaterialBatchCode;
+      document.getElementById("modalRawMaterialBatchCodeHidden").value = rawMaterialBatchCode;
+      document.getElementById("modalSupplierCodeHidden").value = supplierCode;
+      document.getElementById("modalRawMaterialName").value = rawMaterialName;
+      document.getElementById("modalDateDelivered").value = formattedDateDelivered;
+      document.getElementById("modalQuantityBought").value = quantityBought;
+      document.getElementById("modalQuantityLeft").value = quantityLeft;
+      
+      // Compute the used quantity (original Quantity Bought - original Quantity Left)
+      var used = parseFloat(quantityBought) - parseFloat(quantityLeft);
+      document.getElementById("modalUsed").value = used;
+      
+      // Set the radio buttons for Use Category
+      if (useCategory === "WBC") {
+         document.getElementById("useCategoryWBC").checked = true;
+      } else if (useCategory === "GGB") {
+         document.getElementById("useCategoryGGB").checked = true;
+      } else if (useCategory === "Both") {
+         document.getElementById("useCategoryBoth").checked = true;
+      }
+      
+      document.getElementById("modalExpirationDate").value = formattedExpirationDate;
+      document.getElementById("modalStatus").value = status;
+      document.getElementById("modalCost").value = cost;
+      
+      // Populate the supplier dropdown for ingredients
+      fetch('/api/suppliers/ingredients')
+          .then(response => response.json())
+          .then(data => {
+              let supplierSelect = document.getElementById("modalSupplierCode");
+              supplierSelect.innerHTML = '<option value="">Select a Supplier</option>';
+              data.suppliers.forEach(supplier => {
+                  let option = document.createElement("option");
+                  option.value = supplier.SupplierCode;
+                  option.textContent = supplier.SupplierName;
+                  if (supplier.SupplierCode === supplierCode) {
+                      option.selected = true;
+                  }
+                  supplierSelect.appendChild(option);
+              });
+          })
+          .catch(error => console.error('Error fetching suppliers:', error));
+  
+      openModal("updateIngredientModal");
+    }
+    
+    function validateIngredientUpdate() {
+      var qb = parseFloat(document.getElementById("modalQuantityBought").value) || 0;
+      var ql = parseFloat(document.getElementById("modalQuantityLeft").value) || 0;
+      var used = parseFloat(document.getElementById("modalUsed").value) || 0;
+      // Expected Quantity Left = new Quantity Bought - used
+      if (Math.abs(ql - (qb - used)) > 0.001) {
+        alert("Error: Quantity Left must equal Quantity Bought minus the used quantity (" + used + ").");
+        return false;
+      }
+      return true;
+    }
+    
+    function openDeleteModalIngredient(pk, batchCode, name) {
+      document.getElementById('deleteIngredientMessage').textContent = `Are you sure you want to delete "${name}"?`;
+      document.getElementById('deleteIngredientForm').action = `/ingredients/delete/${pk}/`;
+      openModal('deleteIngredientModal');
+    }
+    
+    function openDeleteModalUsedIngredient(usedBatchCode, name) {
+      document.getElementById('deleteUsedIngredientMessage').textContent = `Are you sure you want to delete the used ingredient entry for "${name}"?`;
+      document.getElementById('deleteUsedIngredientForm').action = `/used-ingredients/delete/${usedBatchCode}/`;
+      openModal('deleteUsedIngredientModal');
+    }
+    
+    // Update Packaging Modal functions
+    function openUpdateModalPackaging(packagingBatchCode, rawMaterialName, containerSize, dateDelivered, qtyBought, qtyLeft, useCategory, cost, supplierCode) {
+      let packagingRow = document.querySelector(`[data-packaging-code='${packagingBatchCode}']`);
+      if (!packagingRow) {
+          alert("Error: Packaging material not found.");
+          return;
+      }
+      let pk = packagingRow.getAttribute("data-packaging-pk");
+      let formattedDateDelivered = formatDateToISO(dateDelivered);
+      
+      document.getElementById("modalPackagingBatchCode").textContent = packagingBatchCode;
+      document.getElementById("modalPackagingBatchCodeHidden").value = packagingBatchCode;
+      document.getElementById('RawMaterialName').value = rawMaterialName;
+      document.getElementById('ContainerSize').value = containerSize;
+      document.getElementById('DateDelivered').value = formattedDateDelivered;
+      document.getElementById('QuantityBought').value = qtyBought;
+      document.getElementById('QuantityLeft').value = qtyLeft;
+      
+      // Compute the used quantity for packaging: used = qtyBought - qtyLeft
+      var used = parseFloat(qtyBought) - parseFloat(qtyLeft);
+      document.getElementById("modalUsedPackaging").value = used;
+      
+      // Set radio buttons for packaging Use Category
+      if (useCategory === "WBC") {
+         document.getElementById("packUseCategoryWBC").checked = true;
+      } else if (useCategory === "GGB") {
+         document.getElementById("packUseCategoryGGB").checked = true;
+      } else if (useCategory === "Both") {
+         document.getElementById("packUseCategoryBoth").checked = true;
+      }
+      document.getElementById('Cost').value = cost;
+      document.getElementById('modalSupplierCodeHidden').value = supplierCode;
+      
+      // Populate the supplier dropdown for packaging
+      fetch('/api/suppliers/packaging')
+          .then(response => response.json())
+          .then(data => {
+              let supplierSelect = document.getElementById("modalSupplierCode");
+              supplierSelect.innerHTML = '<option value="">Select a Supplier</option>';
+              data.suppliers.forEach(supplier => {
+                  let option = document.createElement("option");
+                  option.value = supplier.SupplierCode;
+                  option.textContent = supplier.SupplierName;
+                  if (supplier.SupplierCode === supplierCode) {
+                      option.selected = true;
+                  }
+                  supplierSelect.appendChild(option);
+              });
+          })
+          .catch(error => console.error('Error fetching suppliers:', error));
+      openModal("updatePackagingModal");
+    }
+    
+    function validatePackagingUpdate() {
+      var qb = parseFloat(document.getElementById("QuantityBought").value) || 0;
+      var ql = parseFloat(document.getElementById("QuantityLeft").value) || 0;
+      var used = parseFloat(document.getElementById("modalUsedPackaging").value) || 0;
+      // Expected Quantity Left = new Quantity Bought - used
+      if (Math.abs(ql - (qb - used)) > 0.001) {
+         alert("Error: For packaging, Quantity Left must equal Quantity Bought minus the used quantity (" + used + ").");
+         return false;
+      }
+      return true;
+    }
+    
+    function openDeleteModalPackaging(pk, batchCode, name) {
+      document.getElementById('deletePackagingMessage').textContent = `Are you sure you want to delete "${name}"?`;
+      document.getElementById('deletePackagingForm').action = `/packaging/delete/${pk}/`;
+      openModal('deletePackagingModal');
+    }
+    
+    function openDeleteModalUsedPack(pk, name) {
+      document.getElementById('deleteUsedPackagingMessage').textContent = `Are you sure you want to delete the used packaging entry for "${name}"?`;
+      document.getElementById('deleteUsedPackagingForm').action = `/used-packaging/delete/${pk}/`;
+      openModal('deleteUsedPackagingModal');
+    }
+    
+    // Validate that in the subtract packaging modal, the Date Used is not before the Date Delivered.
+    function validatePackagingSubtraction() {
+      var dateUsed = document.getElementById("id_DateUsed").value;
+      var select = document.getElementById("id_PackagingRawMaterialBatchCode");
+      var selectedOption = select.options[select.selectedIndex];
+      var dateDelivered = selectedOption.getAttribute("data-date-delivered");
+      if (dateUsed && dateDelivered && dateUsed < dateDelivered) {
+        alert("Date Used cannot be before the Date Delivered (" + dateDelivered + ").");
+        return false;
+      }
+      return true;
+    }
+    
+    window.onclick = function(e) {
+      const modals = ['usedIngredientsHistoryModal','addIngredientModal','subtractIngredientModal','updateIngredientModal','deleteIngredientModal','deleteUsedIngredientModal','addPackagingModal','updatePackagingModal','deletePackagingModal','subtractPackagingModal','usedPackagingHistoryModal','updateUsedPackagingModal','deleteUsedPackagingModal'];
+      modals.forEach(function(id) {
+        const modal = document.getElementById(id);
+        if (e.target === modal) {
+          closeModal(id);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
