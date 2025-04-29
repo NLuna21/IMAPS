@@ -90,30 +90,44 @@
     <!-- Ingredients Table -->
     <div class="table-container">
       <table>
+        <colgroup>
+          <col style="width: 12%;"> <!-- Ingredient Name -->
+          <col style="width: 9%;"> <!-- Batch Code -->
+          <col style="width: 8%;"> <!-- Quantity Bought -->
+          <col style="width: 8%;"> <!-- Quantity Left -->
+          <col style="width: 11%;"> <!-- Supplier -->
+          <col style="width: 12%;"> <!-- Date Delivered -->
+          <col style="width: 8%;">  <!-- Use Category -->
+          <col style="width: 12%;">  <!-- Expiration Date -->
+          <col style="width: 8%;">  <!-- Cost -->
+          <col style="width: 8.5%;">  <!-- Status -->
+          <col style="width: 10%;"> <!-- Options -->
+        </colgroup>
         <thead>
           <tr class="table-header">
-            <th class="pagination" colspan="6">
-              Page 1/20
-              <button class="pageButton">&lt;</button>
-              <button class="pageButton">&gt;</button>
+            <th class="pagination" colspan="6" style="text-align: left;">
+              Page <span id="ingCurrentPage">1</span>/<span id="ingTotalPages">1</span>
+              <button class="pageButton" onclick="changeIngredientsPage(-1)" id="ingPrev">&lt;</button>
+              <button class="pageButton" onclick="changeIngredientsPage(1)" id="ingNext">&gt;</button>
             </th>
-            <th class="search-bar-container" colspan="5">
-              <div class="search-bar">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text" class="search-input" placeholder="Search Ingredients...">
-                <button class="menu-button">
+            <th class="search-bar-container" colspan="5" style="text-align: right;">
+              <div class="search-bar" style="display: inline-flex; align-items: center;">
+                <i class="fa-solid fa-magnifying-glass search-icon" id="ingredientsSearchIcon" style="cursor: pointer;"></i>
+                <input type="text" class="search-input" id="ingredientsSearchInput" placeholder="Search Ingredients..." style="padding: 4px 8px; font-size: 14px;">
+                <button class="menu-button" id="ingredientsFilterMenu" style="background: none; border: none; margin-left: 6px; cursor: pointer;">
                   <svg viewBox="0 0 24 24">
                     <path d="M3 12h18M3 6h18M3 18h18" stroke="#555" stroke-width="2" stroke-linecap="round"/>
                   </svg>
                 </button>
               </div>
             </th>
+            
           </tr>
           <tr>
             <th>Ingredient Name</th>
             <th>Batch Code</th>
-            <th>Quantity Bought (g,grams)</th>
-            <th>Quantity Left</th>
+            <th class="qtybought">Qty. Bought</th>
+            <th>Qty. Left</th>
             <th>Supplier</th>
             <th>Date Delivered</th>
             <th>Use Category</th>
@@ -123,7 +137,7 @@
             <th>Options</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="ingredientsTableBody">
           {% for ing in ingredients %}
           <tr data-raw-material-code="{{ ing.RawMaterialBatchCode }}" data-raw-material-pk="{{ ing.id }}">
             <td>{{ ing.RawMaterialName }}</td>
@@ -144,9 +158,10 @@
                 <span class="status-pill green">{{ ing.Status }}</span>
               {% endif %}
             </td>
-            <td>
+            <td class="optionscolumn">
+              
               <button class="update-button" onclick="openUpdateModalIngredient('{{ ing.RawMaterialBatchCode }}','{{ ing.SupplierCode }}','{{ ing.RawMaterialName }}','{{ ing.DateDelivered }}','{{ ing.QuantityBought }}','{{ ing.QuantityLeft }}','{{ ing.UseCategory }}','{{ ing.ExpirationDate }}','{{ ing.Status }}','{{ ing.Cost }}')">Update</button>
-              <button class="button-outline" onclick="openDeleteModalIngredient('{{ ing.id }}','{{ ing.RawMaterialBatchCode }}','{{ ing.RawMaterialName }}')">Delete</button>
+              <button class="delete-button" onclick="openDeleteModalIngredient('{{ ing.id }}','{{ ing.RawMaterialBatchCode }}','{{ ing.RawMaterialName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
@@ -154,6 +169,10 @@
             <td colspan="10">No Ingredients Found.</td>
           </tr>
           {% endfor %}
+          <tr id="noIngredientsRow" style="display: none;">
+            <td colspan="11" style="text-align: center; color: gray;">No matching ingredients found.</td>
+          </tr>
+          
         </tbody>
       </table>
     </div>
@@ -549,6 +568,72 @@
         }
       });
     }
-  </script>
+  const ingRowsPerPage = 3;
+  let ingCurrentPage = 1;
+  let filteredIngredients = null;
+
+  function paginateIngredientsTable() {
+    const allRows = Array.from(document.querySelectorAll('#ingredientsTableBody tr:not(#noIngredientsRow)'));
+    const rowsToPaginate = filteredIngredients === null ? allRows : filteredIngredients;
+
+    const totalPages = Math.ceil(rowsToPaginate.length / ingRowsPerPage) || 1;
+    ingCurrentPage = Math.min(ingCurrentPage, totalPages);
+
+    document.getElementById('ingCurrentPage').textContent = ingCurrentPage;
+    document.getElementById('ingTotalPages').textContent = totalPages;
+
+    // Hide all rows first
+    allRows.forEach(row => row.style.display = 'none');
+    document.getElementById('noIngredientsRow').style.display = 'none';
+
+    if (rowsToPaginate.length === 0 && filteredIngredients !== null) {
+      document.getElementById('noIngredientsRow').style.display = '';
+      return;
+    }
+
+    const start = (ingCurrentPage - 1) * ingRowsPerPage;
+    const end = ingCurrentPage * ingRowsPerPage;
+    rowsToPaginate.slice(start, end).forEach(row => row.style.display = '');
+
+    document.getElementById('ingPrev').disabled = ingCurrentPage === 1;
+    document.getElementById('ingNext').disabled = ingCurrentPage === totalPages;
+  }
+
+  function changeIngredientsPage(direction) {
+    ingCurrentPage += direction;
+    paginateIngredientsTable();
+  }
+
+  function filterIngredientsTable() {
+    const query = document.getElementById('ingredientsSearchInput').value.toLowerCase().trim();
+    const allRows = Array.from(document.querySelectorAll('#ingredientsTableBody tr:not(#noIngredientsRow)'));
+
+    if (query === '') {
+      filteredIngredients = null;
+    } else {
+      filteredIngredients = allRows.filter(row => {
+        const cells = row.querySelectorAll('td');
+        const name = (cells[0]?.textContent || '').toLowerCase(); // RawMaterialName
+        const batch = (cells[1]?.textContent || '').toLowerCase(); // RawMaterialBatchCode
+        return name.includes(query) || batch.includes(query);
+      });
+    }
+
+    ingCurrentPage = 1;
+    paginateIngredientsTable();
+  }
+
+  document.addEventListener('DOMContentLoaded', paginateIngredientsTable);
+  document.getElementById('ingredientsSearchInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      filterIngredientsTable();
+    }
+  });
+  document.getElementById('ingredientsSearchIcon').addEventListener('click', filterIngredientsTable);
+  document.getElementById('ingredientsFilterMenu').addEventListener('click', () => {
+    alert('Filter panel coming soon...');
+  });
+</script>
 </body>
 </html>
