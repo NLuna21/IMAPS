@@ -15,7 +15,9 @@ h1 {
 .sidebar {
     width: 200px;
     background: #e8edf8; /* Solid light blue for a clean look */
-    padding: 20px;
+    padding-left: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
     box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
     height: 100vh;
 }
@@ -110,18 +112,48 @@ button:hover {
 .update-button {
     background: #0074FF;
     color: #fff;
+    font-size: 12px;
     width: auto;
     min-width: 80px;
+    max-width: 40px;
     height: 40px;
     padding: 10px 20px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: background 0.5s ease;
 }
 .update-button:hover {
     opacity: 0.8;
 }
+.delete-button{
+    background: #ff2200;
+    font-size: 12px;
+    color: #fff;
+    width: auto;
+    min-width: 80px;
+    max-width: 40px;
+    height: 40px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.5s ease;
+}
+.delete-button:hover{
+    opacity: 0.8;
+}
+
+.optionscolumn {
+    padding-left: 8px; /* optional spacing */
+  }
+  
+  .options-buttons {
+    display: flex;
+    justify-content: flex-start; /* left-align */
+    gap: 6px; /* space between buttons */
+  }
+  
 
 /* Table Styles */
 .table-container {
@@ -164,7 +196,7 @@ tbody tr:last-child td:last-child {
 
 th,
 td {
-    padding: 25px;
+    padding: 20px;
     text-align: left;
     font-size: 14px;
     font-weight: normal;

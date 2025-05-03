@@ -90,24 +90,26 @@
     <!-- Packaging Table -->
     <div class="table-container">
       <table>
+
         <thead>
           <tr class="table-header">
-            <th class="pagination" colspan="4">
-              Page 1/20
-              <button class="pageButton">&lt;</button>
-              <button class="pageButton">&gt;</button>
+            <th class="pagination" colspan="4" style="text-align: left;">
+              Page <span id="packCurrentPage">1</span>/<span id="packTotalPages">1</span>
+              <button class="pageButton" onclick="changePackagingPage(-1)" id="packPrev">&lt;</button>
+              <button class="pageButton" onclick="changePackagingPage(1)" id="packNext">&gt;</button>
             </th>
-            <th class="search-bar-container" colspan="6">
-              <div class="search-bar">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text" class="search-input" placeholder="Search Packaging...">
-                <button class="menu-button">
+            <th class="search-bar-container" colspan="6" style="text-align: right;">
+              <div class="search-bar" style="display: inline-flex; align-items: center;">
+                <i class="fa-solid fa-magnifying-glass search-icon" id="packagingSearchIcon" style="cursor: pointer;"></i>
+                <input type="text" class="search-input" id="packagingSearchInput" placeholder="Search Packaging..." style="padding: 4px 8px; font-size: 14px;">
+                <button class="menu-button" id="packagingFilterMenu" style="background: none; border: none; margin-left: 6px; cursor: pointer;">
                   <svg viewBox="0 0 24 24">
                     <path d="M3 12h18M3 6h18M3 18h18" stroke="#555" stroke-width="2" stroke-linecap="round"/>
                   </svg>
                 </button>
               </div>
             </th>
+            
           </tr>
           <tr>
             <th>Packaging Type</th>
@@ -122,7 +124,7 @@
             <th>Options</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="packagingTableBody">
           {% for material in materials %}
           <tr data-packaging-pk="{{ material.id }}" data-packaging-code="{{ material.PackagingBatchCode }}">
             <td>
@@ -149,7 +151,7 @@
             <td>₱{{ material.Cost }}</td>
             <td>
               <button class="update-button" onclick="openUpdateModalPackaging('{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}','{{ material.ContainerSize }}','{{ material.DateDelivered }}','{{ material.QuantityBought }}','{{ material.QuantityLeft }}','{{ material.UseCategory }}','{{ material.Cost }}','{{ material.SupplierCode.SupplierCode }}')">Update</button>
-              <button class="button-outline" onclick="openDeleteModalPackaging('{{ material.id }}','{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}')">Delete</button>
+              <button class="delete-button" onclick="openDeleteModalPackaging('{{ material.id }}','{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
@@ -157,6 +159,10 @@
             <td colspan="10">No Packaging Materials Found.</td>
           </tr>
           {% endfor %}
+          <tr id="noPackagingRow" style="display: none;">
+            <td colspan="10" style="text-align: center; color: gray;">No matching packaging materials found.</td>
+          </tr>
+          
         </tbody>
       </table>
     </div>
@@ -615,6 +621,78 @@
         }
       });
     }
-  </script>
+  
+  const packRowsPerPage = 3;
+  let packCurrentPage = 1;
+  let filteredPackaging = null;
+
+  function paginatePackagingTable() {
+    const allRows = Array.from(document.querySelectorAll('#packagingTableBody tr:not(#noPackagingRow)'));
+    const rowsToPaginate = filteredPackaging === null ? allRows : filteredPackaging;
+
+    const totalPages = Math.ceil(rowsToPaginate.length / packRowsPerPage) || 1;
+    packCurrentPage = Math.min(packCurrentPage, totalPages);
+
+    document.getElementById('packCurrentPage').textContent = packCurrentPage;
+    document.getElementById('packTotalPages').textContent = totalPages;
+
+    // Hide all rows including the "no results" row
+    allRows.forEach(row => row.style.display = 'none');
+    document.getElementById('noPackagingRow').style.display = 'none';
+
+    if (rowsToPaginate.length === 0 && filteredPackaging !== null) {
+      document.getElementById('noPackagingRow').style.display = '';
+      return;
+    }
+
+    const start = (packCurrentPage - 1) * packRowsPerPage;
+    const end = packCurrentPage * packRowsPerPage;
+    rowsToPaginate.slice(start, end).forEach(row => row.style.display = '');
+
+    document.getElementById('packPrev').disabled = packCurrentPage === 1;
+    document.getElementById('packNext').disabled = packCurrentPage === totalPages;
+  }
+
+  function changePackagingPage(direction) {
+    packCurrentPage += direction;
+    paginatePackagingTable();
+  }
+
+  function filterPackagingTable() {
+    const query = document.getElementById('packagingSearchInput').value.toLowerCase().trim();
+    const allRows = Array.from(document.querySelectorAll('#packagingTableBody tr:not(#noPackagingRow)'));
+
+    if (query === '') {
+      filteredPackaging = null;
+    } else {
+      filteredPackaging = allRows.filter(row => {
+        const cells = row.querySelectorAll('td');
+        const type = (cells[0]?.textContent || '').toLowerCase(); // Packaging Type
+        const batch = (cells[1]?.textContent || '').toLowerCase(); // Batch Code
+        return type.includes(query) || batch.includes(query);
+      });
+    }
+
+    packCurrentPage = 1;
+    paginatePackagingTable();
+  }
+
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', paginatePackagingTable);
+
+  document.getElementById('packagingSearchInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      filterPackagingTable();
+    }
+  });
+
+  document.getElementById('packagingSearchIcon').addEventListener('click', filterPackagingTable);
+
+  document.getElementById('packagingFilterMenu').addEventListener('click', () => {
+    alert("Filter panel coming soon...");
+  });
+</script>
+
 </body>
 </html>

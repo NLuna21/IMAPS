@@ -58,6 +58,43 @@
       <table>
         <thead>
           <tr>
+            <!-- Pagination on the left -->
+            <th class="pagination" colspan="4" style="text-align: left;">
+              Page <span id="supCurrentPage">1</span>/<span id="supTotalPages">1</span>
+              <button class="pageButton" onclick="changeSupplierPage(-1)" id="supPrev">&lt;</button>
+              <button class="pageButton" onclick="changeSupplierPage(1)" id="supNext">&gt;</button>
+            </th>
+          
+            <!-- Search bar on the right -->
+            <th class="search-bar-container" colspan="4" style="text-align: right;">
+              <div class="search-bar" style="display: inline-flex; align-items: center;">
+                <!-- Search icon (acts as submit) -->
+                <i class="fa-solid fa-magnifying-glass search-icon"
+                   id="supplierSearchIcon"
+                   style="cursor: pointer; margin-right: 6px;"></i>
+          
+                <!-- Search input -->
+                <input type="text"
+                       id="supplierSearchInput"
+                       class="search-input"
+                       placeholder="Search Suppliers..."
+                       style="padding: 4px 8px; font-size: 14px;">
+          
+                <!-- Hamburger menu for future filters -->
+                <button class="menu-button"
+                        id="supplierFilterMenu"
+                        style="background: none; border: none; margin-left: 8px; cursor: pointer;">
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M3 12h18M3 6h18M3 18h18"
+                          stroke="#555"
+                          stroke-width="2"
+                          stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </th>
+          </tr>
+          <tr>
             <th>Supplier Code</th>
             <th>Supplier Name</th>
             <th>Category</th>
@@ -68,7 +105,7 @@
             <th>Options</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="supplierTableBody">
           {% for sup in suppliers %}
           <tr>
             <td>{{ sup.SupplierCode }}</td>
@@ -90,7 +127,7 @@
                   '{{ sup.ContactNumber }}',
                   '{{ sup.PointPerson }}'
               )">Update</button>
-              <button class="button-outline" onclick="openDeleteModalSupplier('{{ sup.SupplierCode }}','{{ sup.SupplierName }}')">Delete</button>
+              <button class="delete-button" onclick="openDeleteModalSupplier('{{ sup.SupplierCode }}','{{ sup.SupplierName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
@@ -98,6 +135,9 @@
             <td colspan="8">No Suppliers Found.</td>
           </tr>
           {% endfor %}
+          <tr id="noResultsRow" style="display: none;">
+            <td colspan="8" style="text-align: center; color: gray;">No matching suppliers found.</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -228,6 +268,79 @@
         }
       });
     }
-  </script>
+  const supRowsPerPage = 3;
+  let supCurrentPage = 1;
+  let filteredRows = null;
+
+  function paginateSupplierTable() {
+    const allRows = Array.from(document.querySelectorAll('#supplierTableBody tr:not(#noResultsRow)'));
+
+    const rowsToPaginate = filteredRows === null ? allRows : filteredRows;
+
+    const totalPages = Math.ceil(rowsToPaginate.length / supRowsPerPage) || 1;
+    supCurrentPage = Math.min(supCurrentPage, totalPages);
+
+    document.getElementById('supTotalPages').textContent = totalPages;
+    document.getElementById('supCurrentPage').textContent = supCurrentPage;
+
+    // First hide everything (including noResultsRow)
+    allRows.forEach(row => row.style.display = 'none');
+    document.getElementById('noResultsRow').style.display = 'none';
+
+    // If there are no rows to show, display the "no results" row
+    if (rowsToPaginate.length === 0 && filteredRows !== null) {
+      document.getElementById('noResultsRow').style.display = '';
+      return;
+    }
+
+    // Show paginated slice
+    const start = (supCurrentPage - 1) * supRowsPerPage;
+    const end = supCurrentPage * supRowsPerPage;
+    rowsToPaginate.slice(start, end).forEach(row => row.style.display = '');
+
+    // Enable/disable navigation
+    document.getElementById('supPrev').disabled = supCurrentPage === 1;
+    document.getElementById('supNext').disabled = supCurrentPage === totalPages;
+  }
+
+  function changeSupplierPage(direction) {
+    supCurrentPage += direction;
+    paginateSupplierTable();
+  }
+
+  function filterSupplierTable() {
+    const query = document.getElementById('supplierSearchInput').value.toLowerCase().trim();
+    const allRows = Array.from(document.querySelectorAll('#supplierTableBody tr:not(#noResultsRow)'));
+
+    if (query === '') {
+      filteredRows = null; // Reset filter
+    } else {
+      filteredRows = allRows.filter(row => {
+        const cells = row.querySelectorAll('td');
+        const code = (cells[0]?.textContent || '').toLowerCase();
+        const name = (cells[1]?.textContent || '').toLowerCase();
+        return code.includes(query) || name.includes(query);
+      });
+    }
+
+    supCurrentPage = 1;
+    paginateSupplierTable();
+  }
+
+  // Event bindings
+  document.addEventListener('DOMContentLoaded', paginateSupplierTable);
+  document.getElementById('supplierSearchInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      filterSupplierTable();
+    }
+  });
+  document.getElementById('supplierSearchIcon').addEventListener('click', filterSupplierTable);
+  document.getElementById('supplierFilterMenu').addEventListener('click', () => {
+    alert('Filter options coming soon...');
+  });
+</script>
+
+
 </body>
 </html>
