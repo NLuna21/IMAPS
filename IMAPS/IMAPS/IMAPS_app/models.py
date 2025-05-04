@@ -173,7 +173,7 @@ class UsedPackaging(models.Model):
         db_column='PackagingBatchCode'
     )
     RawMaterialName = models.CharField(max_length=255)
-    QuanityUsed = models.IntegerField()
+    QuantityUsed = models.IntegerField()
     USECATEGORY_CHOICES = [
         ('WBC', 'WBC'),
         ('GGB', 'GGB'),
