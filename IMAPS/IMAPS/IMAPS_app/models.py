@@ -1,5 +1,3 @@
-# IMAPS_app/models.py
-
 import random
 import string
 from datetime import date, timedelta
@@ -30,7 +28,7 @@ class Supplier(models.Model):
 
 # -------------------- IngredientsRawMaterials --------------------
 class IngredientsRawMaterials(models.Model):
-    id = models.AutoField(primary_key=True)  # Use id as primary key (auto-incrementing)
+    id = models.AutoField(primary_key=True)
     RawMaterialBatchCode = models.CharField(max_length=50, unique=True, blank=True)
     SupplierCode = models.ForeignKey(
         Supplier,
@@ -48,46 +46,46 @@ class IngredientsRawMaterials(models.Model):
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES, default="GGB")
     ExpirationDate = models.DateField()
-    Status = models.CharField(max_length=15, blank=True)  # auto-generated; not editable via forms
+    Status = models.CharField(max_length=15, blank=True)
     Cost = models.IntegerField(default=0, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        # Auto-generate batch code only if it doesn't exist.
-        if not self.RawMaterialBatchCode:
+        # Determine if we need to regenerate batch code
+        regenerate = False
+        if not self.pk:
+            regenerate = True
+        else:
+            old = IngredientsRawMaterials.objects.get(pk=self.pk)
+            if old.RawMaterialName != self.RawMaterialName or old.DateDelivered != self.DateDelivered:
+                regenerate = True
+
+        if regenerate:
             date_str = self.DateDelivered.strftime("%Y%m%d")
             words = self.RawMaterialName.split()
             name_abbrev = ''.join(word[0] for word in words[:3]).upper()
-            random_number = self.generate_random_number()  # Generate a 3-digit random number
+            random_number = ''.join(random.choices(string.digits, k=3))
             self.RawMaterialBatchCode = f"{date_str}-{name_abbrev}-{random_number}"
-            # If QuantityLeft hasn't been set, default it to QuantityBought.
             if self.QuantityLeft == 0:
                 self.QuantityLeft = self.QuantityBought
 
-        # Auto-compute Status:
+        # Auto-compute Status
         today = date.today()
-        # If the ingredient expires within 30 days (or already expired), mark as "Expiring".
         if self.ExpirationDate and self.ExpirationDate <= today + timedelta(days=30):
             self.Status = "Expiring"
-        # Otherwise, if QuantityLeft is below threshold (e.g., less than 10), mark as "Low Inventory".
         elif self.QuantityLeft < 10:
             self.Status = "Low Inventory"
         else:
             self.Status = "OK"
+
         super().save(*args, **kwargs)
 
-    def generate_random_number(self):
-        """
-        Generate a 3-digit random number.
-        """
-        return ''.join(random.choices(string.digits, k=3))
-    
     def __str__(self):
         return f"{self.RawMaterialBatchCode} - {self.RawMaterialName}"
 
 
 # -------------------- PackagingRawMaterials --------------------
 class PackagingRawMaterials(models.Model):
-    id = models.AutoField(primary_key=True)  # Use id as primary key (auto-incrementing)
+    id = models.AutoField(primary_key=True)
     PackagingBatchCode = models.CharField(max_length=50, unique=True, blank=True)
     SupplierCode = models.ForeignKey(
         Supplier,
@@ -103,32 +101,37 @@ class PackagingRawMaterials(models.Model):
         ('Both', 'Both'),
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES)
-    Status = models.CharField(max_length=15, blank=True)  # auto-computed
+    Status = models.CharField(max_length=15, blank=True)
     Cost = models.IntegerField(default=0, blank=True, null=True)
     ContainerSize = models.CharField(max_length=50, blank=True, null=True)
     DateDelivered = models.DateField()
-    # The name of the packaging material (for abbreviation purposes)
 
     def save(self, *args, **kwargs):
-        # Generate batch code only if it hasn't been set yet.
-        if not self.PackagingBatchCode:
+        regenerate = False
+        if not self.pk:
+            regenerate = True
+        else:
+            old = PackagingRawMaterials.objects.get(pk=self.pk)
+            if old.RawMaterialName != self.RawMaterialName or old.ContainerSize != self.ContainerSize or old.DateDelivered != self.DateDelivered:
+                regenerate = True
+
+        if regenerate:
             date_str = self.DateDelivered.strftime("%Y%m%d")
             words = self.RawMaterialName.split()
             name_abbrev = ''.join(word[0] for word in words[:3]).upper()
-            container_size = self.ContainerSize if self.ContainerSize else "UNK"
+            container = self.ContainerSize or "UNK"
             random_number = ''.join(random.choices(string.digits, k=3))
-            self.PackagingBatchCode = f"{date_str}-{name_abbrev}-{container_size}-{random_number}"
+            self.PackagingBatchCode = f"{date_str}-{name_abbrev}-{container}-{random_number}"
             if self.QuantityLeft == 0:
                 self.QuantityLeft = self.QuantityBought
-        # Auto-compute status based on quantity left.
+
         if self.QuantityLeft < 10:
             self.Status = "Low Inventory"
         else:
             self.Status = "OK"
+
         super().save(*args, **kwargs)
 
-    # Removed is_batch_code_invalid and generate_random_number methods as batch code is now immutable once set.
-    
     def __str__(self):
         return f"{self.PackagingBatchCode} - {self.RawMaterialName}"
 
@@ -184,7 +187,6 @@ class UsedPackaging(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.USEDPackagingBatchCode:
-            # Use the DateDelivered from the linked PackagingRawMaterials record
             date_str = self.PackagingRawMaterialBatchCode.DateDelivered.strftime("%Y%m%d")
             words = self.RawMaterialName.split()
             name_abbrev = ''.join(word[0] for word in words[:3]).upper()
