@@ -59,7 +59,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('USEDPackagingBatchCode', models.CharField(blank=True, max_length=50, primary_key=True, serialize=False)),
                 ('RawMaterialName', models.CharField(max_length=255)),
-                ('QuanityUsed', models.IntegerField()),
+                ('QuantityUsed', models.IntegerField()),
                 ('UseCategory', models.CharField(choices=[('WBC', 'WBC'), ('GGB', 'GGB'), ('Both', 'Both')], max_length=10)),
                 ('DateUsed', models.DateField()),
                 ('PackagingRawMaterialBatchCode', models.ForeignKey(db_column='PackagingBatchCode', on_delete=django.db.models.deletion.CASCADE, to='IMAPS_app.packagingrawmaterials')),

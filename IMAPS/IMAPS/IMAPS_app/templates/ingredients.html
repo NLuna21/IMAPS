@@ -267,6 +267,10 @@
       </div>
       <form method="POST" id="updateIngredientForm" onsubmit="return validateIngredientUpdate();">
         {% csrf_token %}
+        <div class="form-group">
+          <label for="updatePassword">Password:</label>
+          <input type="password" id="updatePassword" name="password" required>
+        </div>
         <input type="hidden" name="RawMaterialBatchCode" id="modalRawMaterialBatchCodeHidden" value="">
         <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden" value="">
         <!-- Hidden used value: computed as (Quantity Bought - Quantity Left) -->
@@ -328,8 +332,8 @@
       <form method="POST" id="deleteIngredientForm">
         {% csrf_token %}
         <div class="form-group">
-          <label for="deleteUsedPassword">Password:</label>
-          <input type="password" id="deleteUsedPassword" name="password" required>
+          <label for="deletePassword">Password:</label>
+          <input type="password" id="deletePassword" name="password" required>
         </div>
         <div class="button-container">
           <button type="submit" class="update-button">Delete</button>
@@ -399,6 +403,9 @@
       let formattedDateDelivered = formatDateToISO(dateDelivered);
       let formattedExpirationDate = formatDateToISO(expirationDate);
       
+      let form = document.getElementById("updateIngredientForm");
+      form.action = `/ingredients/update/${pk}/`;
+
       document.getElementById("modalRawMaterialBatchCode").textContent = rawMaterialBatchCode;
       document.getElementById("modalRawMaterialBatchCodeHidden").value = rawMaterialBatchCode;
       document.getElementById("modalSupplierCodeHidden").value = supplierCode;
