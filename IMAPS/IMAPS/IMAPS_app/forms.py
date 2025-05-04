@@ -115,9 +115,14 @@ class UsedIngredientForm(forms.ModelForm):
         return cleaned_data
 
 class UsedPackagingForm(forms.ModelForm):
+    PackagingRawMaterialBatchCode = forms.ModelChoiceField(
+        queryset=PackagingRawMaterials.objects.all(),
+        to_field_name="PackagingBatchCode",     # <— key line
+        label="Packaging Batch Code"
+    )
     class Meta:
         model = UsedPackaging
-        exclude = ['USEDPackagingBatchCode']
+        exclude = ['USEDPackagingBatchCode','RawMaterialName']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }

@@ -178,45 +178,38 @@ def used_ingredients_create(request):
             pass
     return redirect('ingredients_list')
 
-def ingredients_create(request):
-    if request.method == 'POST':
-        form = IngredientsRawMaterialsForm(request.POST)
+def used_ingredients_create(request):
+    if request.method == "POST":
+        form = UsedIngredientForm(request.POST)
         if form.is_valid():
-            existing_batch = form.cleaned_data.get('existing_batch')
-            quantity_bought = form.cleaned_data.get('QuantityBought')
-            # If an existing batch is selected...
-            if existing_batch and existing_batch != 'None':
-                try:
-                    # Retrieve the existing ingredient record by its batch code.
-                    existing_record = IngredientsRawMaterials.objects.get(RawMaterialBatchCode=existing_batch)
-                    
-                    # Create a new ingredient record from the form without saving immediately.
-                    new_record = form.save(commit=False)
-                    # Override these fields with those from the existing record.
-                    new_record.RawMaterialName = existing_record.RawMaterialName
-                    new_record.UseCategory = existing_record.UseCategory
-                    # Set the new record's QuantityLeft to be its own QuantityBought initially.
-                    new_record.QuantityLeft = new_record.QuantityBought
-                    new_record.save()
-                    
-                    # Now compute the combined quantity left.
-                    combined_quantity = existing_record.QuantityLeft + new_record.QuantityLeft
-                    
-                    # Update the existing record to have the combined QuantityLeft.
-                    existing_record.QuantityLeft = combined_quantity
-                    existing_record.save()
-                    
-                    # Also update the new record so that its QuantityLeft matches.
-                    new_record.QuantityLeft = combined_quantity
-                    new_record.save()
-                except IngredientsRawMaterials.DoesNotExist:
-                    form.save()
-            else:
-                form.save()
+            # 1️⃣  Save later so we can fill-in RawMaterialName automatically
+            used_ing = form.save(commit=False)
+            used_ing.RawMaterialName = (
+                used_ing.IngredientRawMaterialBatchCode.RawMaterialName
+            )
+            used_ing.save()                  # now the UsedIngredient row exists
+
+            # 2️⃣  Recompute the shared running balance for this ingredient
+            batches = IngredientsRawMaterials.objects.filter(
+                RawMaterialName=used_ing.RawMaterialName
+            )
+            current_balance = (
+                batches.first().QuantityLeft if batches.exists() else 0
+            )
+            new_balance = max(current_balance - used_ing.QuantityUsed, 0)
+
+            # 3️⃣  Propagate the new balance to every sibling batch in one query
+            batches.update(QuantityLeft=new_balance)
         else:
-            messages.error(request, "Used ingredient creation error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-    return redirect('ingredients_list')
+            messages.error(
+                request,
+                "Used ingredient creation error: "
+                + "; ".join(
+                    f"{field}: {', '.join(errs)}"
+                    for field, errs in form.errors.items()
+                ),
+            )
+    return redirect("ingredients_list")
 
 def used_ingredients_update(request, pk):
     used_ing = get_object_or_404(UsedIngredient, pk=pk)
@@ -341,21 +334,32 @@ def used_packaging_create(request):
     if request.method == 'POST':
         form = UsedPackagingForm(request.POST)
         if form.is_valid():
-            used_pack = form.save()
-            # Find all packaging records with the same RawMaterialName.
-            qs = PackagingRawMaterials.objects.filter(RawMaterialName=used_pack.RawMaterialName)
-            total_left = sum(record.QuantityLeft for record in qs)
-            new_total = total_left - used_pack.QuanityUsed
-            if new_total < 0:
-                new_total = 0
-            # Update all records with the new combined quantity left.
-            for record in qs:
-                record.QuantityLeft = new_total
-                record.save()
+            # --- 1. Save but let us tweak fields first -----------------------
+            used_pack = form.save(commit=False)
+            # Auto-fill the name from the selected batch
+            used_pack.RawMaterialName = (
+                used_pack.PackagingRawMaterialBatchCode.RawMaterialName
+            )
+            used_pack.save()                      # now the row is persisted
+
+            # --- 2. Recompute the running balance ---------------------------
+            # Every batch for this packaging material mirrors the *same* balance,
+            # so read QuantityLeft from any one of them (first()).
+            batches = PackagingRawMaterials.objects.filter(
+                RawMaterialName=used_pack.RawMaterialName
+            )
+            current_balance = batches.first().QuantityLeft if batches.exists() else 0
+            new_balance = max(current_balance - used_pack.QuantityUsed, 0)
+
+            # Update all sibling batches to reflect the new balance in one go
+            batches.update(QuantityLeft=new_balance)
         else:
-            messages.error(request, "Used packaging creation error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-            pass
+            messages.error(
+                request,
+                "Used packaging creation error: " +
+                "; ".join(f"{field}: {', '.join(errs)}"
+                          for field, errs in form.errors.items())
+            )
     return redirect('packaging_list')
 
 def used_packaging_update(request, pk):
@@ -377,7 +381,7 @@ def used_packaging_delete(request, pk):
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
         packaging = used_pack.PackagingRawMaterialBatchCode
-        packaging.QuantityLeft += used_pack.QuanityUsed
+        packaging.QuantityLeft += used_pack.QuantityUsed
         packaging.save()
         used_pack.delete()
     return redirect('packaging_list')
@@ -401,7 +405,7 @@ def report_summary(request):
         used_pack = (UsedPackaging.objects
                      .filter(DateUsed__range=[start_date, end_date])
                      .values('RawMaterialName')
-                     .annotate(total_used=Sum('QuanityUsed')))
+                     .annotate(total_used=Sum('QuantityUsed')))
 
         # calculate expired and remaining
         # sum up quantity left at the moment of expiry

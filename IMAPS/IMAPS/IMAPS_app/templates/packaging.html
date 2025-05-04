@@ -307,8 +307,8 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="id_QuantityUsed">Quantity Used:</label>
-          <input type="number" id="id_QuantityUsed" name="QuantityUsed" min="1" required>
+          <label for="id_QuanityUsed">Quantity Used:</label>
+          <input type="number" id="id_QuanityUsed" name="QuanityUsed" min="1" required>
         </div>
         <div class="form-group">
           <label for="id_UseCategory">Use Category:</label>
@@ -391,8 +391,8 @@
           <input type="text" id="updateUsedRawMaterialName" name="RawMaterialName" readonly>
         </div>
         <div class="form-group">
-          <label for="updateQuantityUsed">Quantity Used</label>
-          <input type="number" id="updateQuantityUsed" name="QuantityUsed" min="0">
+          <label for="updateQuanityUsed">Quantity Used</label>
+          <input type="number" id="updateQuanityUsed" name="QuanityUsed" min="0">
         </div>
         <div class="form-group">
           <label for="updateUsedUseCategory">Use Category</label>
@@ -540,11 +540,6 @@
       }
       let pk = packagingRow.getAttribute("data-packaging-pk");
       let formattedDateDelivered = formatDateToISO(dateDelivered);
-
-      // ← SET THE ACTION HERE
-      let form = document.getElementById("updatePackagingForm");
-      form.action = `/packaging/update/${pk}/`;
-
       document.getElementById("modalPackagingBatchCode").textContent = packagingBatchCode;
       document.getElementById("modalPackagingBatchCodeHidden").value = packagingBatchCode;
       document.getElementById('RawMaterialName').value = rawMaterialName;

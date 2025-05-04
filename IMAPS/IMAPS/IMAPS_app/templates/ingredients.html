@@ -148,7 +148,7 @@
             <td>{{ ing.DateDelivered|date:"d/m/Y" }}</td>
             <td>{{ ing.UseCategory }}</td>
             <td>{{ ing.ExpirationDate|date:"d/m/Y" }}</td>
-            <td> {{ing.Cost}}</td>
+            <td>₱{{ing.Cost}}</td>
             <td>
               {% if ing.Status == "Expiring" %}
                 <span class="status-pill red">Expiring</span>
