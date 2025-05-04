@@ -99,6 +99,31 @@
           {% endfor %}
         </tbody>
       </table>
+
+      <h3>Expired Ingredients</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Quantity Expired</th>
+            <th>Quantity Remaining</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for exp in exp_ing %}
+          <tr>
+            <td>{{ exp.RawMaterialName }}</td>
+            <td>{{ exp.expired_qty }}</td>
+            <td>{{ exp.remaining_qty }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3">No expired ingredients in this period.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
     {% else %}
       <p>Please select a start date and end date, then click "Generate".</p>
     {% endif %}

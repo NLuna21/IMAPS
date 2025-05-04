@@ -120,19 +120,32 @@ def ingredients_create(request):
     return redirect('ingredients_list')
 
 def ingredients_update(request, pk):
-    # Use an update form that includes QuantityLeft
     ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        # Use the dedicated update form for ingredients.
         form = IngredientsRawMaterialsUpdateForm(request.POST, instance=ingredient)
         if form.is_valid():
-            form.save()
-        else:
-            messages.error(request, "Ingredient update error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-    return redirect('ingredients_list')
+            updated = form.save()   # persists DateDelivered, ExpirationDate, etc.
+            # recompute QuantityLeft across all batches
+            batches = IngredientsRawMaterials.objects.filter(
+                RawMaterialName=updated.RawMaterialName
+            )
+            total_bought = batches.aggregate(total=Sum('QuantityBought'))['total'] or 0
+            total_used   = UsedIngredient.objects.filter(
+                RawMaterialName=updated.RawMaterialName
+            ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+            new_left = max(total_bought - total_used, 0)
+            batches.update(QuantityLeft=new_left)
+            return redirect('ingredients_list')
+    else:
+        # GET → prepopulate form (including date widget)
+        form = IngredientsRawMaterialsUpdateForm(instance=ingredient)
+
+    return render(request, 'ingredients_update.html', {
+        'form': form,
+        'ingredient': ingredient
+    })
 
 def ingredients_delete(request, pk):
     ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
@@ -288,18 +301,32 @@ def packaging_create(request):
     return redirect('packaging_list')
 
 def packaging_update(request, pk):
-    # Use a dedicated update form for packaging that includes QuantityLeft.
     material = get_object_or_404(PackagingRawMaterials, pk=pk)
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
         form = PackagingRawMaterialsUpdateForm(request.POST, instance=material)
         if form.is_valid():
-            form.save()
-        else:
-            messages.error(request, "Packaging update error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-    return redirect('packaging_list')
+            updated = form.save()   # persists DateDelivered, ContainerSize, etc.
+            # recompute QuantityLeft across all packaging batches
+            batches = PackagingRawMaterials.objects.filter(
+                RawMaterialName=updated.RawMaterialName
+            )
+            total_bought = batches.aggregate(total=Sum('QuantityBought'))['total'] or 0
+            total_used   = UsedPackaging.objects.filter(
+                RawMaterialName=updated.RawMaterialName
+            ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+            new_left = max(total_bought - total_used, 0)
+            batches.update(QuantityLeft=new_left)
+            return redirect('packaging_list')
+    else:
+        # GET → prepopulate form
+        form = PackagingRawMaterialsUpdateForm(instance=material)
+
+    return render(request, 'packaging_update.html', {
+        'form': form,
+        'material': material
+    })
 
 def packaging_delete(request, pk):
     material = get_object_or_404(PackagingRawMaterials, pk=pk)
@@ -364,7 +391,9 @@ def report_summary(request):
     used_ing = []
     used_pack = []
     exp_ing = []
+
     if start_date and end_date:
+        # total used
         used_ing = (UsedIngredient.objects
                     .filter(DateUsed__range=[start_date, end_date])
                     .values('RawMaterialName')
@@ -373,11 +402,33 @@ def report_summary(request):
                      .filter(DateUsed__range=[start_date, end_date])
                      .values('RawMaterialName')
                      .annotate(total_used=Sum('QuanityUsed')))
-        exp_ing = (IngredientsRawMaterials.objects
-                     .filter(DateUsed__range=[start_date, end_date])
-                     .filter(ExpirationDate__gte=start_date)
+
+        # calculate expired and remaining
+        # sum up quantity left at the moment of expiry
+        expired_qs = (IngredientsRawMaterials.objects
+                     .filter(ExpirationDate__range=[start_date, end_date])
                      .values('RawMaterialName')
-                     .annotate(total_used=Sum('QuantityLeft')))
+                     .annotate(expired_qty=Sum('QuantityLeft')))
+
+        # sum up quantity left outside that expiry window
+        remaining_qs = (IngredientsRawMaterials.objects
+                       .exclude(ExpirationDate__range=[start_date, end_date])
+                       .values('RawMaterialName')
+                       .annotate(remaining_qty=Sum('QuantityLeft')))
+
+        # merge the two querysets into exp_ing list of dicts
+        exp_ing = []
+        # build a map for remaining
+        rem_map = {r['RawMaterialName']: r['remaining_qty'] for r in remaining_qs}
+        for e in expired_qs:
+            name = e['RawMaterialName']
+            exp_qty = e['expired_qty']
+            rem_qty = rem_map.get(name, 0)
+            exp_ing.append({
+                'RawMaterialName': name,
+                'expired_qty': exp_qty,
+                'remaining_qty': rem_qty
+            })
     return render(request, 'report_summary.html', {
         'used_ing': used_ing,
         'used_pack': used_pack,
