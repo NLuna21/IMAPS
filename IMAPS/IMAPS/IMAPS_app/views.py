@@ -149,11 +149,25 @@ def ingredients_update(request, pk):
 
 def ingredients_delete(request, pk):
     ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
-    if request.method == 'POST':
-        if request.POST.get('password') != PASSWORD:
+
+    if request.method == "POST":
+        if request.POST.get("password") != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        ingredient.delete()
-    return redirect('ingredients_list')
+
+        raw_name = ingredient.RawMaterialName        # ① remember the family
+        ingredient.delete()                          # ② remove the row
+
+        # ③–④ recalc QuantityLeft across the survivors
+        batches = IngredientsRawMaterials.objects.filter(RawMaterialName=raw_name)
+        if batches.exists():
+            total_bought = batches.aggregate(t=Sum("QuantityBought"))["t"] or 0
+            total_used   = UsedIngredient.objects.filter(
+                               RawMaterialName=raw_name
+                           ).aggregate(t=Sum("QuantityUsed"))["t"] or 0
+            new_left = max(total_bought - total_used, 0)
+            batches.update(QuantityLeft=new_left)
+
+    return redirect("ingredients_list")
 
 
 
@@ -322,12 +336,26 @@ def packaging_update(request, pk):
     })
 
 def packaging_delete(request, pk):
-    material = get_object_or_404(PackagingRawMaterials, pk=pk)
-    if request.method == 'POST':
-        if request.POST.get('password') != PASSWORD:
+    packaging = get_object_or_404(PackagingRawMaterials, pk=pk)
+
+    if request.method == "POST":
+        if request.POST.get("password") != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        material.delete()
-    return redirect('packaging_list')
+
+        raw_name = packaging.RawMaterialName          # ① remember the family
+        packaging.delete()                            # ② remove the row
+
+        # ③ – ④ recalc QuantityLeft across remaining batches
+        batches = PackagingRawMaterials.objects.filter(RawMaterialName=raw_name)
+        if batches.exists():
+            total_bought = batches.aggregate(t=Sum("QuantityBought"))["t"] or 0
+            total_used   = UsedPackaging.objects.filter(
+                               RawMaterialName=raw_name
+                           ).aggregate(t=Sum("QuantityUsed"))["t"] or 0
+            new_left = max(total_bought - total_used, 0)
+            batches.update(QuantityLeft=new_left)
+
+    return redirect("packaging_list")
 
 
 def used_packaging_create(request):
