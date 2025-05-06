@@ -22,6 +22,7 @@ from IMAPS_app import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.packaging_list, name='home'),
 
     # Suppliers
     path('suppliers/', views.suppliers_list, name='suppliers_list'),

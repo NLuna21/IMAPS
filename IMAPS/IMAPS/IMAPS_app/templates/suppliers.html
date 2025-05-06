@@ -175,10 +175,12 @@
         <!-- Display SupplierCode but make it read-only -->
         <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
         
-        <label for="supplier_name_update">Supplier Name:</label>
+        <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
         <input type="text" name="SupplierName" id="supplier_name_update" required>
         
-        <label for="category_update">Category:</label>
+        <label for="category_update">
+          Category<span style="color:red;">*</span>:
+        </label>
         <select name="Category" id="category_update" required>
           <option value="Ingredient">Ingredient</option>
           <option value="Packaging">Packaging</option>
@@ -198,7 +200,9 @@
         <input type="text" name="PointPerson" id="point_person_update">
         
         <div class="form-group">
-          <label for="deleteUsedPassword">Password:</label>
+          <label for="deleteUsedPassword">
+            Password<span style="color:red;">*</span>:
+          </label>
           <input type="password" id="deleteUsedPassword" name="password" required>
         </div>
         <div class="button-container">
