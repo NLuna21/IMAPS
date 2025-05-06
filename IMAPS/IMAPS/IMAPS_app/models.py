@@ -37,8 +37,8 @@ class IngredientsRawMaterials(models.Model):
     )
     RawMaterialName = models.CharField(max_length=255)
     DateDelivered = models.DateField()
-    QuantityBought = models.IntegerField(default=0)
-    QuantityLeft = models.IntegerField(default=0)
+    QuantityBought = models.FloatField(default=0)
+    QuantityLeft = models.FloatField(default=0)
     USECATEGORY_CHOICES = [
         ('WBC', 'WBC'),
         ('GGB', 'GGB'),
@@ -47,7 +47,7 @@ class IngredientsRawMaterials(models.Model):
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES, default="GGB")
     ExpirationDate = models.DateField()
     Status = models.CharField(max_length=15, blank=True)
-    Cost = models.IntegerField(default=0, blank=True, null=True)
+    Cost = models.FloatField(default=0, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Determine if we need to regenerate batch code
@@ -102,7 +102,7 @@ class PackagingRawMaterials(models.Model):
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES)
     Status = models.CharField(max_length=15, blank=True)
-    Cost = models.IntegerField(default=0, blank=True, null=True)
+    Cost = models.FloatField(default=0, blank=True, null=True)
     ContainerSize = models.CharField(max_length=50, blank=True, null=True)
     DateDelivered = models.DateField()
 
