@@ -150,9 +150,25 @@
         <h2>Add Supplier</h2>
         <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'supplier_create' %}">
+      <form method="POST" action="{% url 'supplier_create' %}" class="form-grid" id="createSupplierForm">
         {% csrf_token %}
-        {{ create_form.as_p }}
+        {% for field in create_form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}
+        :
+      </label>
+
+      {{ field }}
+
+      {# show errors, if any #}
+      {% if field.errors %}
+        <div class="text-danger">
+          {{ field.errors|join:", " }}
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
         <div class="button-container">
           <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Back</button>
           <button type="submit" class="update-button">Save</button>

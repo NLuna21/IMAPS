@@ -177,15 +177,45 @@
         <h2>Add Packaging Material</h2>
         <span class="close" onclick="closeModal('addPackagingModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'packaging_create' %}" onsubmit="return confirm('Are you sure you want to add this record?');">
-        {% csrf_token %}
-        {{ create_form.as_p }}
+      <form
+  method="POST"
+  action="{% url 'packaging_create' %}"
+  id="createPackagingForm"
+  class="form-vertical"
+  onsubmit="return confirm('Are you sure you want to add this record?');"
+>
+  {% csrf_token %}
 
-        <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('addPackagingModal')">Discard</button>
-          <button type="submit" class="update-button">Save</button>
-        </div>
-      </form>
+  {% for field in create_form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}
+        {% if field.field.required %}
+          <span style="color:red">*</span>
+        {% endif %}
+        :
+      </label>
+      {{ field }}
+      {% for err in field.errors %}
+        <div class="text-danger">{{ err }}</div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  <div class="button-container">
+    <button
+      type="button"
+      class="button-outline"
+      onclick="closeModal('addPackagingModal')"
+    >
+      Discard
+    </button>
+    <button type="submit" class="update-button">
+      Save
+    </button>
+  </div>
+</form>
+
     </div>
   </div>
 
@@ -196,7 +226,7 @@
         <h2>Update Packaging Material (Code: <span id="modalPackagingBatchCode"></span>)</h2>
         <span class="close" onclick="closeModal('updatePackagingModal')">&times;</span>
       </div>
-      <form method="POST" id="updatePackagingForm" class="form-grid" onsubmit="return validatePackagingUpdate();">
+      <form method="POST" id="updatePackagingForm" class="form-vertical" onsubmit="return validatePackagingUpdate();">
         {% csrf_token %}
         <div class="form-group">
           <label for="updatePassword">
@@ -334,16 +364,36 @@
           </label>
           <input type="number" id="id_QuanityUsed" name="QuanityUsed" min="1" required>
         </div>
-        <div class="form-group">
-          <label for="id_UseCategory">
-            Use Category<span style="color:red;">*</span>:
-          </label>
-          <select id="id_UseCategory" name="UseCategory" required>
-            <option value="WBC">WBC</option>
-            <option value="GGB">GGB</option>
-            <option value="Both">Both</option>
-          </select>
-        </div>
+          <div class="form-group">
+            <label>Use Category<span style="color:red;">*</span>:</label>
+            <div id="id_UseCategoryRadios">
+              <input
+                type="radio"
+                name="UseCategory"
+                id="id_UseCategory_WBC"
+                value="WBC"
+                required
+              >
+              <label for="id_UseCategory_WBC">WBC</label>
+          
+              <input
+                type="radio"
+                name="UseCategory"
+                id="id_UseCategory_GGB"
+                value="GGB"
+              >
+              <label for="id_UseCategory_GGB">GGB</label>
+          
+              <input
+                type="radio"
+                name="UseCategory"
+                id="id_UseCategory_Both"
+                value="Both"
+              >
+              <label for="id_UseCategory_Both">Both</label>
+            </div>
+          </div>
+          
         <div class="form-group">
           <label for="id_DateUsed">
             Date Used<span style="color:red;">*</span>:
