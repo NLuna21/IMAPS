@@ -98,10 +98,10 @@
             <th>Supplier Code</th>
             <th>Supplier Name</th>
             <th>Category</th>
+            <th>Point Person</th>
             <th>Contact Number</th>
             <th>Email Address</th>
             <th>Social Media</th>
-            <th>Point Person</th>
             <th>Options</th>
           </tr>
         </thead>
@@ -111,10 +111,53 @@
             <td>{{ sup.SupplierCode }}</td>
             <td>{{ sup.SupplierName }}</td>
             <td>{{ sup.Category }}</td>
-            <td>{{ sup.ContactNumber }}</td>
-            <td>{{ sup.EmailAddress }}</td>
-            <td>{{ sup.SocialMedia }}</td>
             <td>{{ sup.PointPerson }}</td>
+            {# Contact Number #}
+            <td class="multi-cell">
+              {{ sup.contact_list.0 }}
+              {% if sup.contact_list|length > 1 %}
+                <div class="dropdown-wrapper">
+                  <span class="toggle-dropdown">▼</span>
+                  <ul class="dropdown-list">
+                    {% for num in sup.contact_list|slice:"1:" %}
+                      <li>{{ num }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+            
+            {# Email Address #}
+            <td class="multi-cell">
+              {{ sup.email_list.0 }}
+              {% if sup.email_list|length > 1 %}
+                <div class="dropdown-wrapper">
+                  <span class="toggle-dropdown">▼</span>
+                  <ul class="dropdown-list">
+                    {% for email in sup.email_list|slice:"1:" %}
+                      <li>{{ email }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+            
+            {# Social Media #}
+            <td class="multi-cell">
+              {{ sup.sm_list.0 }}
+              {% if sup.sm_list|length > 1 %}
+                <div class="dropdown-wrapper">
+                  <span class="toggle-dropdown">▼</span>
+                  <ul class="dropdown-list">
+                    {% for sm in sup.sm_list|slice:"1:" %}
+                      <li>{{ sm }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+            
+            
             <td>
               <button class="update-button" 
               onclick="openUpdateModalSupplier(
@@ -179,55 +222,87 @@
 
 
   <!-- SUPPLIER UPDATE MODAL -->
-  <div id="updateSupplierModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Update Supplier</h2>
-        <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
-      </div>
-      <form method="POST" id="updateSupplierForm">
-        {% csrf_token %}
-        <label for="supplier_code_update">Supplier Code:</label>
-        <!-- Display SupplierCode but make it read-only -->
-        <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
-        
-        <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
-        <input type="text" name="SupplierName" id="supplier_name_update" required>
-        
-        <label for="category_update">
-          Category<span style="color:red;">*</span>:
-        </label>
-        <select name="Category" id="category_update" required>
-          <option value="Ingredient">Ingredient</option>
-          <option value="Packaging">Packaging</option>
-          <option value="Both">Both</option>
-        </select>
-        
-        <label for="social_media_update">Social Media:</label>
-        <input type="text" name="SocialMedia" id="social_media_update">
-        
-        <label for="email_address_update">Email Address:</label>
-        <input type="email" name="EmailAddress" id="email_address_update">
-        
-        <label for="contact_number_update">Contact Number:</label>
-        <input type="text" name="ContactNumber" id="contact_number_update">
-        
-        <label for="point_person_update">Point Person:</label>
-        <input type="text" name="PointPerson" id="point_person_update">
-        
-        <div class="form-group">
-          <label for="deleteUsedPassword">
-            Password<span style="color:red;">*</span>:
-          </label>
-          <input type="password" id="deleteUsedPassword" name="password" required>
-        </div>
-        <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
-          <button type="submit" class="update-button">Save Changes</button>
-        </div>
-      </form>
+<div id="updateSupplierModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Update Supplier</h2>
+      <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
     </div>
+    <form method="POST" id="updateSupplierForm">
+      {% csrf_token %}
+
+      <!-- SupplierCode, Name, Category unchanged… -->
+
+      <label for="supplier_code_update">Supplier Code:</label>
+      <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
+
+      <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
+      <input type="text" name="SupplierName" id="supplier_name_update" required>
+
+      <label for="category_update">Category<span style="color:red;">*</span>:</label>
+      <select name="Category" id="category_update" required>
+        <option value="Ingredient">Ingredient</option>
+        <option value="Packaging">Packaging</option>
+        <option value="Both">Both</option>
+      </select>
+
+      <label for="point_person_update">Point Person:</label>
+      <input type="text"
+             name="PointPerson"
+             id="point_person_update"
+             />
+      <!-- Now the 3 multi-fields: -->
+
+      <!-- Social Media -->
+      <div class="multi-field" data-field-name="SocialMedia">
+        <label>Social Media:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="url" name="SocialMedia[]" id="social_media_update_0" placeholder="https://…" />
+          </div>
+        </div>
+        <button type="button" class="add-btn" data-field-name="SocialMedia">+ Add more</button>
+      </div>
+
+      <!-- Email Address -->
+      <div class="multi-field" data-field-name="EmailAddress">
+        <label>Email Address:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="email" name="EmailAddress[]" id="email_address_update_0" placeholder="name@example.com" />
+          </div>
+        </div>
+        <button type="button" class="add-btn" data-field-name="EmailAddress">+ Add more</button>
+      </div>
+
+      <!-- Contact Number -->
+      <div class="multi-field" data-field-name="ContactNumber">
+        <label>Contact Number:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="tel" name="ContactNumber[]" id="contact_number_update_0" placeholder="+63…" pattern="^[0-9+\-\s]+$"/>
+          </div>
+        </div>
+        <button type="button" class="add-btn" data-field-name="ContactNumber">+ Add more</button>
+      </div>
+
+
+      
+
+      <!-- Password and buttons unchanged… -->
+      <div class="form-group">
+        <label for="deleteUsedPassword">
+          Password<span style="color:red;">*</span>:
+        </label>
+        <input type="password" id="deleteUsedPassword" name="password" required>
+      </div>
+      <div class="button-container">
+        <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
+        <button type="submit" class="update-button">Save Changes</button>
+      </div>
+    </form>
   </div>
+</div>
 
 
   <!-- DELETE SUPPLIER MODAL -->
@@ -359,6 +434,84 @@
   document.getElementById('supplierFilterMenu').addEventListener('click', () => {
     alert('Filter options coming soon...');
   });
+
+  // Run once on page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Delegate all “Add more” clicks
+  document.querySelectorAll('.add-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const field = btn.dataset.fieldName;       // e.g. "EmailAddress"
+      const container = btn.closest('.multi-field').querySelector('.fields-wrap');
+      // Clone the first row:
+      const prototype = container.querySelector('.field-row');
+      const clone = prototype.cloneNode(true);
+      const input = clone.querySelector('input');
+      input.value = '';                          // clear old value
+      // Re-id it so each is unique (optional):
+      const idx = container.querySelectorAll('.field-row').length;
+      input.id = `${input.name.replace('[]','')}_${idx}`;
+      container.appendChild(clone);
+    });
+  });
+});
+
+// Override to inject existing data & open the modal
+function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson) {
+  const form = document.getElementById('updateSupplierForm');
+  form.action = `/suppliers/update/${pk}/`;
+
+  document.getElementById('supplier_code_update').value = supplierCode;
+  document.getElementById('supplier_name_update').value = supplierName;
+  document.getElementById('category_update').value = category;
+  document.getElementById('point_person_update').value    = pointPerson;  // <— add this line!
+
+
+  // Helper: split on comma or semicolon, trim, drop empties
+  const splitList = str => str
+    ? str.split(/[;,]/).map(s=>s.trim()).filter(Boolean)
+    : [];
+
+  // For each multi-field type, clear old rows and re-create
+  const types = ['SocialMedia','EmailAddress','ContactNumber'];
+  types.forEach(type => {
+    const raw = { SocialMedia: socialMedia,
+                  EmailAddress: emailAddress,
+                  ContactNumber: contactNumber,
+                }[type] || '';
+    const list = splitList(raw);
+
+    const wrapper = document.querySelector(`.multi-field[data-field-name="${type}"] .fields-wrap`);
+    // remove all but the first row:
+    wrapper.querySelectorAll('.field-row')
+      .forEach((row, i) => { if (i>0) row.remove(); });
+
+    // fill 
+    wrapper.querySelector('input').value = list[0]||'';
+    // clone extras
+    list.slice(1).forEach(val => {
+      const clone = wrapper.querySelector('.field-row').cloneNode(true);
+      clone.querySelector('input').value = val;
+      wrapper.appendChild(clone);
+    });
+  });
+
+  openModal('updateSupplierModal');
+}
+// Pin‐open on click
+document.querySelectorAll('.toggle-dropdown').forEach(icon => {
+  icon.addEventListener('click', e => {
+    const wrapper = icon.closest('.dropdown-wrapper');
+    wrapper.classList.toggle('open');
+    e.stopPropagation();
+  });
+});
+// Close when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-wrapper.open')
+          .forEach(w => w.classList.remove('open'));
+});
+
+
 </script>
 
 

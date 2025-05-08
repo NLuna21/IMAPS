@@ -35,7 +35,7 @@ class SupplierForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = Supplier
-        fields = '__all__'
+        exclude = ['change_status']
 
 class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(

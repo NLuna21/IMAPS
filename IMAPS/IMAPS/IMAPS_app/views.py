@@ -25,44 +25,103 @@ PASSWORD = "test123"
 
 # ================= SUPPLIERS =================
 
+import re
+from django.shortcuts import render
+from .models import Supplier
+from .forms import SupplierForm
+
+
 def suppliers_list(request):
+    # Fetch only active and newly modified suppliers
     suppliers = Supplier.objects.filter(change_status__in=["active", "new_modified"])
+
+    # Prepare a splitter to handle both commas and semicolons
+    splitter = re.compile(r"[;,]")
+    for sup in suppliers:
+        # Convert each delimited string into a clean list
+        sup.sm_list      = [s.strip() for s in splitter.split(sup.SocialMedia or '')    if s.strip()]
+        sup.email_list   = [s.strip() for s in splitter.split(sup.EmailAddress or '')    if s.strip()]
+        sup.contact_list = [s.strip() for s in splitter.split(sup.ContactNumber or '')  if s.strip()]
+        sup.pp_list      = [s.strip() for s in splitter.split(sup.PointPerson or '')    if s.strip()]
+
     create_form = SupplierForm()
     return render(request, 'suppliers.html', {
         'suppliers': suppliers,
         'create_form': create_form,
     })
 
+
+
 def supplier_create(request):
     if request.method == 'POST':
         form = SupplierForm(request.POST)
         if form.is_valid():
-            form.save()
+            # Don’t save immediately—grab the instance so we can massage the multi-fields
+            supplier = form.save(commit=False)
+
+            splitter = re.compile(r'[;,]')
+
+            # Re-join each of your array-style inputs back into a single string
+            for field in ('SocialMedia', 'EmailAddress', 'ContactNumber'):
+                raw_list = request.POST.getlist(f'{field}[]')
+                clean    = [s.strip() for s in raw_list if s.strip()]
+                setattr(supplier, field, '; '.join(clean))
+
+            # PointPerson is a single field on your form, so just pull from cleaned_data
+            supplier.PointPerson = form.cleaned_data.get('PointPerson', '').strip()
+
+            # Now persist
+            supplier.save()
         else:
-            messages.error(request,
+            messages.error(
+                request,
                 "Supplier creation error: " +
-                "; ".join(f"{field}: {', '.join(errs)}" for field, errs in form.errors.items())
+                  "; ".join(f"{fld}: {', '.join(errs)}"
+                            for fld, errs in form.errors.items())
             )
     return redirect('suppliers_list')
+
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+import re
 
 def supplier_update(request, pk):
     old = get_object_or_404(Supplier, pk=pk)
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        form = SupplierForm(request.POST)
+
+        # 1) Bind to the existing instance so we UPDATE rather than create
+        form = SupplierForm(request.POST, instance=old)
+
         if form.is_valid():
-            old.change_status = "old_modified"
-            old.save()
-            new = form.save(commit=False)
-            new.change_status = "new_modified"
-            new.save()
+            # 2) Pull out the clean model instance, don't save yet
+            supplier = form.save(commit=False)
+
+            # 3) Re-join your multi-input fields
+            splitter = re.compile(r'[;,]')
+            for field in ('SocialMedia','EmailAddress','ContactNumber'):
+                raw_list = request.POST.getlist(f'{field}[]')
+                clean    = [s.strip() for s in raw_list if s.strip()]
+                setattr(supplier, field, '; '.join(clean))
+
+            supplier.PointPerson = request.POST.get('PointPerson', '').strip()
+
+
+            # 4) Mark it modified and persist
+            supplier.change_status = 'new_modified'
+            supplier.save()
+
         else:
-            messages.error(request,
-                "Supplier update error: " +
-                "; ".join(f"{field}: {', '.join(errs)}" for field, errs in form.errors.items())
+            # gather and show the form errors
+            msg = "Supplier update error: " + "; ".join(
+                f"{fld}: {', '.join(errs)}"
+                  for fld, errs in form.errors.items()
             )
+            messages.error(request, msg)
+
     return redirect('suppliers_list')
+
 
 def supplier_delete(request, pk):
     obj = get_object_or_404(Supplier, pk=pk)

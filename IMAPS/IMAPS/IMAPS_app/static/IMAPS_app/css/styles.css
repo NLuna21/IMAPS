@@ -154,6 +154,7 @@ button:hover {
 /* Table Styles */
 .table-container {
     margin-top: 20px;
+    overflow: visible !important;
 }
 
 table {
@@ -163,7 +164,7 @@ table {
     margin-top: 20px;
     background: #fff;
     border-radius: 20px;
-    overflow: hidden;
+    overflow: visible;
     table-layout: fixed;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
@@ -824,3 +825,99 @@ td a:hover {
     overflow-y: auto;                 /* scroll if it gets too tall */
   }
   
+  .multi-cell { position: relative; }
+.toggle-dropdown { cursor: pointer; margin-left: 4px; }
+.dropdown-list {
+  display: none;
+  position: absolute;
+  top: 100%; left: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  list-style: none; margin: 4px 0; padding: 0;
+  z-index: 10;
+}
+.dropdown-list li { padding: 4px 8px; }
+.multi-cell:hover .dropdown-list,
+.multi-cell:focus-within .dropdown-list { display: block; }
+
+
+.multi-cell {
+  position: relative;       /* establish a containing block */
+  overflow: visible !important;  /* let children overflow this cell */
+}
+
+.dropdown-list {
+  display: none;
+  position: absolute;
+  top: 70%;       /* just under the cell’s bottom edge */
+  left: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  z-index: 9999;   /* higher than any surrounding container */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.dropdown-list li {
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+
+/* Show on hover */
+.multi-cell:hover .dropdown-list {
+  display: block;
+}
+
+/* Show when the cell has the “open” class (toggled by JS) */
+.multi-cell.open .dropdown-list {
+  display: block;
+}
+
+/* Make every input in the update form span the full content width */
+#updateSupplierForm input,
+#updateSupplierForm select {
+  display: block;       /* ensure it’s a block-level box */
+  width: 100% !important;    /* stretch to the container’s full width */
+  box-sizing: border-box;    /* include padding/border in that width */
+}
+
+#updateSupplierForm .fields-wrap .field-row:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+
+.dropdown-wrapper {
+  display: block;
+  text-align: center;
+  position: relative;
+  margin-top: 0.5em;
+}
+.dropdown-wrapper .toggle-dropdown {
+  cursor: pointer;
+  display: inline-block;
+}
+.dropdown-wrapper .dropdown-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #ccc;
+  list-style: none;
+  margin: 0.25em 0 0;
+  padding: 0;
+  z-index: 9999;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.dropdown-wrapper:hover .dropdown-list,
+.dropdown-wrapper.open .dropdown-list {
+  display: block;
+}
+.dropdown-wrapper .dropdown-list li {
+  padding: 0.5em 1em;
+  white-space: nowrap;
+}
