@@ -177,15 +177,45 @@
         <h2>Add Packaging Material</h2>
         <span class="close" onclick="closeModal('addPackagingModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'packaging_create' %}" onsubmit="return confirm('Are you sure you want to add this record?');">
-        {% csrf_token %}
-        {{ create_form.as_p }}
+      <form
+  method="POST"
+  action="{% url 'packaging_create' %}"
+  id="createPackagingForm"
+  class="form-vertical"
+  onsubmit="return confirm('Are you sure you want to add this record?');"
+>
+  {% csrf_token %}
 
-        <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('addPackagingModal')">Discard</button>
-          <button type="submit" class="update-button">Save</button>
-        </div>
-      </form>
+  {% for field in create_form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}
+        {% if field.field.required %}
+          <span style="color:red">*</span>
+        {% endif %}
+        :
+      </label>
+      {{ field }}
+      {% for err in field.errors %}
+        <div class="text-danger">{{ err }}</div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  <div class="button-container">
+    <button
+      type="button"
+      class="button-outline"
+      onclick="closeModal('addPackagingModal')"
+    >
+      Discard
+    </button>
+    <button type="submit" class="update-button">
+      Save
+    </button>
+  </div>
+</form>
+
     </div>
   </div>
 
@@ -196,43 +226,59 @@
         <h2>Update Packaging Material (Code: <span id="modalPackagingBatchCode"></span>)</h2>
         <span class="close" onclick="closeModal('updatePackagingModal')">&times;</span>
       </div>
-      <form method="POST" id="updatePackagingForm" onsubmit="return validatePackagingUpdate();">
+      <form method="POST" id="updatePackagingForm" class="form-vertical" onsubmit="return validatePackagingUpdate();">
         {% csrf_token %}
         <div class="form-group">
-          <label for="updatePassword">Password:</label>
+          <label for="updatePassword">
+            Password<span style="color:red;">*</span>:
+          </label>
           <input type="password" id="updatePassword" name="password" required>
         </div>
         <input type="hidden" name="PackagingBatchCode" id="modalPackagingBatchCodeHidden" value="">
         <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden" value="">
         <div class="form-group">
-          <label for="RawMaterialName">Raw Material Name</label>
+          <label for="RawMaterialName">
+            Raw Material Name<span style="color:red;">*</span>:
+          </label>
           <input type="text" id="RawMaterialName" name="RawMaterialName">
         </div>
         <div class="form-group">
-          <label for="ContainerSize">Container Size</label>
+          <label for="ContainerSize">
+            Container Size<span style="color:red;">*</span>:
+          </label>
           <input type="text" id="ContainerSize" name="ContainerSize">
         </div>
         <div class="form-group">
-          <label for="DateDelivered">Date Delivered</label>
+          <label for="DateDelivered">
+            Date Delivered<span style="color:red;">*</span>:
+          </label>
           <input type="date" id="DateDelivered" name="DateDelivered">
         </div>
         <div class="form-group">
-          <label for="QuantityBought">Quantity Bought</label>
+          <label for="QuantityBought">
+            Quantity Bought<span style="color:red;">*</span>:
+          </label>
           <input type="number" id="QuantityBought" name="QuantityBought" min="0">
         </div>
         <div class="form-group">
-          <label for="QuantityLeft">Quantity Left</label>
+          <label for="QuantityLeft">
+            Quantity Left<span style="color:red;">*</span>:
+          </label>
           <input type="number" id="QuantityLeft" name="QuantityLeft" min="0">
         </div>
         <div class="form-group">
-          <label for="modalSupplierCode">Supplier:</label>
+          <label for="modalSupplierCode">
+            Supplier<span style="color:red;">*</span>:
+          </label>
           <select id="modalSupplierCode" name="SupplierCode">
             <option value="">Select a Supplier</option>
             <!-- Options will be inserted dynamically from /api/suppliers/packaging -->
           </select>
         </div>
         <div class="form-group">
-          <label>Use Category:</label>
+          <label>
+            Use Category<span style="color:red;">*</span>:
+          </label>
           <div id="packUseCategoryRadios">
             <input type="radio" name="UseCategory" value="WBC" id="packUseCategoryWBC">
             <label for="packUseCategoryWBC">WBC</label>
@@ -247,8 +293,10 @@
           <input type="text" name="Status" id="Status" readonly>
         </div>
         <div class="form-group">
-          <label for="Cost">Cost</label>
-          <input type="number" id="Cost" name="Cost" min="0" step="any">
+          <label for="Cost">
+            Cost<span style="color:red;">*</span>:
+          </label>
+          <input type="number" id="Cost" name="Cost" min="0" step="any" required>
         </div>
         <!-- Hidden element to store the used quantity: used = QuantityBought - QuantityLeft -->
         <input type="hidden" id="modalUsedPackaging" name="used" value="">
@@ -292,12 +340,16 @@
       <form method="POST" action="{% url 'used_packaging_create' %}" id="subtractPackagingForm" onsubmit="return validatePackagingSubtraction();">
         {% csrf_token %}
         <div class="form-group">
-          <label for="subtractPassword">Password:</label>
+          <label for="subtractPassword">
+            Password<span style="color:red;">*</span>:
+          </label>
           <input type="password" id="subtractPassword" name="password" required>
         </div>
         <!-- Dropdown for batch code with each option including data-date-delivered -->
         <div class="form-group">
-          <label for="id_PackagingRawMaterialBatchCode">Packaging Batch Code:</label>
+          <label for="id_PackagingRawMaterialBatchCode">
+            Packaging Batch Code<span style="color:red;">*</span>:
+          </label>
           <select id="id_PackagingRawMaterialBatchCode" name="PackagingRawMaterialBatchCode" required>
             {% for material in materials %}
             <option value="{{ material.PackagingBatchCode }}" data-date-delivered="{{ material.DateDelivered|date:'Y-m-d' }}">
@@ -307,19 +359,45 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="id_QuanityUsed">Quantity Used:</label>
-          <input type="number" id="id_QuanityUsed" name="QuanityUsed" min="1" required>
+          <label for="id_QuantityUsed">
+            Quantity Used<span style="color:red;">*</span>:
+          </label>
+          <input type="number" id="id_QuantityUsed" name="QuantityUsed" min="1" required>
         </div>
+          <div class="form-group">
+            <label>Use Category<span style="color:red;">*</span>:</label>
+            <div id="id_UseCategoryRadios">
+              <input
+                type="radio"
+                name="UseCategory"
+                id="id_UseCategory_WBC"
+                value="WBC"
+                required
+              >
+              <label for="id_UseCategory_WBC">WBC</label>
+          
+              <input
+                type="radio"
+                name="UseCategory"
+                id="id_UseCategory_GGB"
+                value="GGB"
+              >
+              <label for="id_UseCategory_GGB">GGB</label>
+          
+              <input
+                type="radio"
+                name="UseCategory"
+                id="id_UseCategory_Both"
+                value="Both"
+              >
+              <label for="id_UseCategory_Both">Both</label>
+            </div>
+          </div>
+          
         <div class="form-group">
-          <label for="id_UseCategory">Use Category:</label>
-          <select id="id_UseCategory" name="UseCategory" required>
-            <option value="WBC">WBC</option>
-            <option value="GGB">GGB</option>
-            <option value="Both">Both</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="id_DateUsed">Date Used:</label>
+          <label for="id_DateUsed">
+            Date Used<span style="color:red;">*</span>:
+          </label>
           <input type="date" id="id_DateUsed" name="DateUsed" required>
         </div>
         <div class="button-container">
@@ -391,8 +469,8 @@
           <input type="text" id="updateUsedRawMaterialName" name="RawMaterialName" readonly>
         </div>
         <div class="form-group">
-          <label for="updateQuanityUsed">Quantity Used</label>
-          <input type="number" id="updateQuanityUsed" name="QuanityUsed" min="0">
+          <label for="updateQuantityUsed">Quantity Used</label>
+          <input type="number" id="updateQuantityUsed" name="QuantityUsed" min="0">
         </div>
         <div class="form-group">
           <label for="updateUsedUseCategory">Use Category</label>

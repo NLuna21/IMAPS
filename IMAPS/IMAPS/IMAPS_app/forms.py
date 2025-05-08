@@ -1,6 +1,7 @@
 # IMAPS_app/forms.py
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.html import format_html
 from .models import (
     Supplier,
     IngredientsRawMaterials,
@@ -9,7 +10,22 @@ from .models import (
     UsedPackaging
 )
 
-class SupplierForm(forms.ModelForm):
+class RequiredFieldsAsteriskMixin:
+    """
+    Mixin to append a red asterisk (*) to the label of required fields.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if getattr(field, 'required', False):
+                # Use existing label or derive from the field name
+                label = field.label or name.replace('_', ' ').capitalize()
+                field.label = format_html(
+                    '{} <span style=\"color:red;\">*</span>',
+                    label
+                )
+
+class SupplierForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     Category = forms.ChoiceField(
         choices=Supplier.CATEGORY_CHOICES,
         widget=forms.RadioSelect,
@@ -21,7 +37,7 @@ class SupplierForm(forms.ModelForm):
         model = Supplier
         fields = '__all__'
 
-class IngredientsRawMaterialsForm(forms.ModelForm):
+class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=IngredientsRawMaterials.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,
@@ -60,7 +76,7 @@ class IngredientsRawMaterialsForm(forms.ModelForm):
             raise ValidationError("Expiration date cannot be before the delivery date.")
         return cleaned_data
 
-class PackagingRawMaterialsForm(forms.ModelForm):
+class PackagingRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=PackagingRawMaterials.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,
@@ -90,7 +106,7 @@ class PackagingRawMaterialsForm(forms.ModelForm):
         choices += [(batch, batch) for batch in batches]
         self.fields['existing_batch'].choices = choices
 
-class UsedIngredientForm(forms.ModelForm):
+class UsedIngredientForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=UsedIngredient.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,
@@ -114,10 +130,10 @@ class UsedIngredientForm(forms.ModelForm):
                 raise ValidationError("Date Used cannot be before the Date Delivered of the ingredient batch.")
         return cleaned_data
 
-class UsedPackagingForm(forms.ModelForm):
+class UsedPackagingForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     PackagingRawMaterialBatchCode = forms.ModelChoiceField(
         queryset=PackagingRawMaterials.objects.all(),
-        to_field_name="PackagingBatchCode",     # <— key line
+        to_field_name="PackagingBatchCode",
         label="Packaging Batch Code"
     )
     class Meta:
@@ -138,7 +154,7 @@ class UsedPackagingForm(forms.ModelForm):
 
 # --- New Update Forms for Ingredients and Packaging ---
 
-class IngredientsRawMaterialsUpdateForm(forms.ModelForm):
+class IngredientsRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=IngredientsRawMaterials.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,
@@ -163,7 +179,7 @@ class IngredientsRawMaterialsUpdateForm(forms.ModelForm):
                 raise ValidationError("Quantity Left cannot be greater than Quantity Bought.")
         return cleaned_data
 
-class PackagingRawMaterialsUpdateForm(forms.ModelForm):
+class PackagingRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=PackagingRawMaterials.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,

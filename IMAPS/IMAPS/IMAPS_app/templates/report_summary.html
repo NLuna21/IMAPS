@@ -49,6 +49,7 @@
     <form method="GET">
       <label>Generate report for period:</label>
       <input type="date" name="start_date" value="{{ start_date|default_if_none:'' }}">
+      to
       <input type="date" name="end_date" value="{{ end_date|default_if_none:'' }}">
       <button type="submit" class="update-button">Generate</button>
     </form>

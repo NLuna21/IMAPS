@@ -150,9 +150,25 @@
         <h2>Add Supplier</h2>
         <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'supplier_create' %}">
+      <form method="POST" action="{% url 'supplier_create' %}" class="form-grid" id="createSupplierForm">
         {% csrf_token %}
-        {{ create_form.as_p }}
+        {% for field in create_form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}
+        :
+      </label>
+
+      {{ field }}
+
+      {# show errors, if any #}
+      {% if field.errors %}
+        <div class="text-danger">
+          {{ field.errors|join:", " }}
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
         <div class="button-container">
           <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Back</button>
           <button type="submit" class="update-button">Save</button>
@@ -175,10 +191,12 @@
         <!-- Display SupplierCode but make it read-only -->
         <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
         
-        <label for="supplier_name_update">Supplier Name:</label>
+        <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
         <input type="text" name="SupplierName" id="supplier_name_update" required>
         
-        <label for="category_update">Category:</label>
+        <label for="category_update">
+          Category<span style="color:red;">*</span>:
+        </label>
         <select name="Category" id="category_update" required>
           <option value="Ingredient">Ingredient</option>
           <option value="Packaging">Packaging</option>
@@ -198,7 +216,9 @@
         <input type="text" name="PointPerson" id="point_person_update">
         
         <div class="form-group">
-          <label for="deleteUsedPassword">Password:</label>
+          <label for="deleteUsedPassword">
+            Password<span style="color:red;">*</span>:
+          </label>
           <input type="password" id="deleteUsedPassword" name="password" required>
         </div>
         <div class="button-container">

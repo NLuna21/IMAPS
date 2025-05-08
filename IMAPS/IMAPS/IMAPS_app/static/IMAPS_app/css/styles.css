@@ -30,15 +30,11 @@ h1 {
 
 .nav-menu {
     list-style: none;
-    padding: 0;
     margin-top: 20px;
 }
 
 .nav-item {
-    display: flex;
-    align-items: center;
     font-size: 16px;
-    padding: 15px 10px;
     color: #333;
     cursor: pointer;
     transition: background 0.3s ease;
@@ -347,3 +343,484 @@ td a:hover {
 .modal button[type="submit"]:hover {
     opacity: 0.8;
 }
+
+.form-grid .form-group {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    column-gap: 1rem;
+    row-gap: .75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .form-grid .form-group input,
+  .form-grid .form-group select,
+  .form-grid .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* remove the underline on every sidebar link */
+.sidebar .nav-menu .nav-item a {
+    text-decoration: none !important;
+    color: inherit;      /* keep the same text color */
+    display: block;      /* make the <a> fill the <li> for full‑area clicks */
+  }
+  
+  
+  /* Optional: carry over your padding & hover/bg from the <li> to the <a> itself */
+  .sidebar .nav-menu .nav-item a {
+    padding: 15px 10px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    transition: background 0.3s ease;
+  }
+  .sidebar .nav-menu .nav-item a:hover {
+    background: #f5f7ff;
+  }
+  .sidebar .nav-menu .nav-item.active > a {
+    background: #fff;
+    font-weight: bold;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    left: -30px;                     /* undo the sidebar’s left padding */
+    width: calc(100% + 20px);        /* grow it back out so it still fills */
+    border-top-left-radius: 10px;    /* keep your rounded corner */
+    border-bottom-left-radius: 10px;
+  }
+
+  .sidebar .nav-menu .nav-item.active > a {
+    display: block;              /* make the <a> fill its container */
+    margin-left: -20px;          /* pull its left edge out past the sidebar padding */
+    padding: 15px 10px 15px 30px;/* top/right/bottom/left:
+                                   left‑padding is original 10px + 20px extra */
+    background: #fff;
+    font-weight: bold;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+  }
+
+  /* ===== Vertical layout for Add Supplier form ===== */
+#createSupplierForm .form-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* labels sit directly above their field */
+  #createSupplierForm .form-group label {
+    margin-bottom: 0;
+  }
+  
+  /* non‑radio inputs still fill 100% */
+  #createSupplierForm .form-group input:not([type="radio"]),
+  #createSupplierForm .form-group select,
+  #createSupplierForm .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* radio list: remove bullets/indent */
+  #createSupplierForm .form-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* each <li> is a row with circle + text inline */
+  #createSupplierForm .form-group ul li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* keep the radio circle small, with a bit of spacing */
+  #createSupplierForm .form-group ul li input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+/* === Horizontal radio‐button list in Add-Supplier form === */
+#createSupplierForm .form-group ul {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;               /* space between each option */
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* ensure each <li> doesn’t add extra indent or bullets */
+  #createSupplierForm .form-group ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* keep each radio circle its normal size */
+  #createSupplierForm .form-group input[type="radio"] {
+    width: auto !important;
+    margin-right: 0.25rem !important;
+  }
+
+
+    /* ===== Vertical layout for Add Supplier form ===== */
+#createIngredientForm .form-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* labels sit directly above their field */
+  #createIngredientForm  .form-group label {
+    margin-bottom: 0;
+  }
+  
+  /* non‑radio inputs still fill 100% */
+  #createIngredientForm  .form-group input:not([type="radio"]),
+  #createIngredientForm  .form-group select,
+  #createIngredientForm  .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* radio list: remove bullets/indent */
+  #createIngredientForm  .form-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* each <li> is a row with circle + text inline */
+  #createIngredientForm  .form-group ul li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* keep the radio circle small, with a bit of spacing */
+  #createIngredientForm .form-group ul li input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+/* === Horizontal radio‐button list in Add-Supplier form === */
+#createIngredientForm  .form-group ul {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;               /* space between each option */
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* ensure each <li> doesn’t add extra indent or bullets */
+  #createIngredientForm  .form-group ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* keep each radio circle its normal size */
+  #createIngredientForm  .form-group input[type="radio"] {
+    width: auto !important;
+    margin-right: 0.25rem !important;
+  }
+
+      /* ===== Vertical layout for Add Supplier form ===== */
+#createUsedIngredientForm .form-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* labels sit directly above their field */
+  #createUsedIngredientForm  .form-group label {
+    margin-bottom: 0;
+  }
+  
+  /* non‑radio inputs still fill 100% */
+  #createUsedIngredientForm  .form-group input:not([type="radio"]),
+  #createUsedIngredientForm  .form-group select,
+  #createUsedIngredientForm  .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* radio list: remove bullets/indent */
+  #createUsedIngredientForm  .form-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* each <li> is a row with circle + text inline */
+  #createUsedIngredientForm  .form-group ul li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* keep the radio circle small, with a bit of spacing */
+  #createUsedIngredientForm .form-group ul li input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+/* === Horizontal radio‐button list in Add-Supplier form === */
+#createUsedIngredientForm  .form-group ul {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;               /* space between each option */
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* ensure each <li> doesn’t add extra indent or bullets */
+  #createUsedIngredientForm  .form-group ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* keep each radio circle its normal size */
+  #createUsedIngredientForm  .form-group input[type="radio"] {
+    width: auto !important;
+    margin-right: 0.25rem !important;
+  }
+    
+        /* ===== Vertical layout for Add Supplier form ===== */
+#createPackagingForm .form-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* labels sit directly above their field */
+  #createPackagingForm  .form-group label {
+    margin-bottom: 0;
+  }
+  
+  /* non‑radio inputs still fill 100% */
+  #createPackagingForm  .form-group input:not([type="radio"]),
+  #createPackagingForm  .form-group select,
+  #createPackagingForm  .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* radio list: remove bullets/indent */
+  #createPackagingForm  .form-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* each <li> is a row with circle + text inline */
+  #createPackagingForm  .form-group ul li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* keep the radio circle small, with a bit of spacing */
+  #createPackagingForm .form-group ul li input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+/* === Horizontal radio‐button list in Add-Supplier form === */
+#createPackagingForm  .form-group ul {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;               /* space between each option */
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* ensure each <li> doesn’t add extra indent or bullets */
+  #createPackagingForm  .form-group ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* keep each radio circle its normal size */
+  #createPackagingForm  .form-group input[type="radio"] {
+    width: auto !important;
+    margin-right: 0.25rem !important;
+  }
+    
+  
+        /* ===== Vertical layout for Add Supplier form ===== */
+#subtractPackagingForm  .form-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* labels sit directly above their field */
+  #subtractPackagingForm   .form-group label {
+    margin-bottom: 0;
+  }
+  
+  /* non‑radio inputs still fill 100% */
+  #subtractPackagingForm   .form-group input:not([type="radio"]),
+  #subtractPackagingForm   .form-group select,
+  #subtractPackagingForm   .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* radio list: remove bullets/indent */
+  #subtractPackagingForm   .form-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* each <li> is a row with circle + text inline */
+  #subtractPackagingForm   .form-group ul li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* keep the radio circle small, with a bit of spacing */
+  #subtractPackagingForm  .form-group ul li input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+/* === Horizontal radio‐button list in Add-Supplier form === */
+#subtractPackagingForm   .form-group ul {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;               /* space between each option */
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* ensure each <li> doesn’t add extra indent or bullets */
+  #subtractPackagingForm   .form-group ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* keep each radio circle its normal size */
+  #subtractPackagingForm   .form-group input[type="radio"] {
+    width: auto !important;
+    margin-right: 0.25rem !important;
+  }
+    /* target your radio list wrapper */
+#subtractPackagingForm #id_UseCategoryRadios {
+    display: grid;
+    grid-template-columns: auto 1fr;  /* circle in col 1, text in col 2 */
+    column-gap: 0.5rem;               /* space between circle & text */
+    row-gap: 0.5rem;                  /* vertical space between choices */
+    align-items: center;              /* vertically center each row */
+    list-style: none;                 /* if it was a UL */
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* if you had any <ul> around it, kill default bullets/indents */
+  #subtractPackagingForm #id_UseCategoryRadios ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  /* also make sure any inner UL>LI aren’t doing their own flex */
+  #subtractPackagingForm #id_UseCategoryRadios ul li {
+    display: contents;
+  }
+  
+          /* ===== Vertical layout for Add Supplier form ===== */
+#updatePackagingForm .form-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  /* labels sit directly above their field */
+  #updatePackagingForm  .form-group label {
+    margin-bottom: 0;
+  }
+  
+  /* non‑radio inputs still fill 100% */
+  #updatePackagingForm  .form-group input:not([type="radio"]),
+  #updatePackagingForm  .form-group select,
+  #updatePackagingForm  .form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* radio list: remove bullets/indent */
+  #updatePackagingForm  .form-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* each <li> is a row with circle + text inline */
+  #updatePackagingForm  .form-group ul li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* keep the radio circle small, with a bit of spacing */
+  #updatePackagingForm .form-group ul li input[type="radio"] {
+    margin-right: 0.5rem;
+  }
+/* === Horizontal radio‐button list in Add-Supplier form === */
+#updatePackagingForm  .form-group ul {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;               /* space between each option */
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* ensure each <li> doesn’t add extra indent or bullets */
+  #updatePackagingForm  .form-group ul li {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* keep each radio circle its normal size */
+  #updatePackagingForm  .form-group input[type="radio"] {
+    width: auto !important;
+    margin-right: 0.25rem !important;
+  }
+
+  /* push the form content down 2rem from the top of its container */
+#updatePackagingForm {
+    margin-top: 1rem;
+  }
+  
+  /* if you’d rather add padding inside the white “card” */
+  .modal-content {
+    padding-top: 3rem;   /* increases space above the form */
+  }
+  
+  /* you can also limit the form’s height and make it scrollable */
+  #updatePackagingForm {
+    max-height: calc(100vh - 150px);  /* leave room for header/footer */
+    overflow-y: auto;                 /* scroll if it gets too tall */
+  }
+  

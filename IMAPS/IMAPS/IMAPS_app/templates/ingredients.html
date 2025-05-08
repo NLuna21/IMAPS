@@ -229,14 +229,37 @@
         <h2>Add Ingredient</h2>
         <span class="close" onclick="closeModal('addIngredientModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'ingredients_create' %}">
-        {% csrf_token %}
-        {{ create_form.as_p }}
-        <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('addIngredientModal')">Discard</button>
-          <button type="submit" class="update-button">Save</button>
-        </div>
-      </form>
+      <form
+  method="POST"
+  action="{% url 'ingredients_create' %}"
+  id="createIngredientForm"
+  class="form-vertical"
+>
+  {% csrf_token %}
+
+  {% for field in create_form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">
+        {{ field.label }}:
+      </label>
+      {{ field }}
+      {% for err in field.errors %}
+        <div class="text-danger">{{ err }}</div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  <div class="button-container">
+    <button type="button" class="button-outline"
+            onclick="closeModal('addIngredientModal')">
+      Discard
+    </button>
+    <button type="submit" class="update-button">
+      Save
+    </button>
+  </div>
+</form>
+
     </div>
   </div>
 
@@ -247,14 +270,48 @@
         <h2>Subtract Ingredients Materials</h2>
         <span class="close" onclick="closeModal('subtractIngredientModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'used_ingredients_create' %}">
-        {% csrf_token %}
-        {{ used_ing_create_form.as_p }}
-        <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('subtractIngredientModal')">Discard</button>
-          <button type="submit" class="update-button">Confirm</button>
+      <form
+      method="POST"
+      action="{% url 'used_ingredients_create' %}"
+      id="createUsedIngredientForm"
+      class="form-vertical"
+    >
+      {% csrf_token %}
+    
+      {% for field in used_ing_create_form %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">
+            {{ field.label }}
+
+            :
+          </label>
+    
+          {{ field }}
+    
+          {% if field.help_text %}
+            <small class="form-text text-muted">{{ field.help_text }}</small>
+          {% endif %}
+    
+          {% for err in field.errors %}
+            <div class="text-danger">{{ err }}</div>
+          {% endfor %}
         </div>
-      </form>
+      {% endfor %}
+    
+      <div class="button-container">
+        <button
+          type="button"
+          class="button-outline"
+          onclick="closeModal('subtractIngredientModal')"
+        >
+          Discard
+        </button>
+        <button type="submit" class="update-button">
+          Confirm
+        </button>
+      </div>
+    </form>
+    
     </div>
   </div>
 
@@ -268,7 +325,9 @@
       <form method="POST" id="updateIngredientForm" onsubmit="return validateIngredientUpdate();">
         {% csrf_token %}
         <div class="form-group">
-          <label for="updatePassword">Password:</label>
+          <label for="updatePassword">
+            Password<span style="color:red;">*</span>:
+          </label>
           <input type="password" id="updatePassword" name="password" required>
         </div>
         <input type="hidden" name="RawMaterialBatchCode" id="modalRawMaterialBatchCodeHidden" value="">
@@ -276,16 +335,24 @@
         <!-- Hidden used value: computed as (Quantity Bought - Quantity Left) -->
         <input type="hidden" id="modalUsed" name="used" value="">
         
-        <label>Ingredient Name:</label>
+        <label for="modalRawMaterialName">
+          Ingredient Name<span style="color:red;">*</span>:
+        </label>
         <input type="text" name="RawMaterialName" id="modalRawMaterialName" required>
-        
-        <label>Date Delivered:</label>
+  
+        <label for="modalDateDelivered">
+          Date Delivered<span style="color:red;">*</span>:
+        </label>
         <input type="date" name="DateDelivered" id="modalDateDelivered" required>
-        
-        <label>Quantity Bought:</label>
+  
+        <label for="modalQuantityBought">
+          Quantity Bought<span style="color:red;">*</span>:
+        </label>
         <input type="number" step="any" name="QuantityBought" id="modalQuantityBought" required>
-        
-        <label>Quantity Left:</label>
+  
+        <label for="modalQuantityLeft">
+          Quantity Left<span style="color:red;">*</span>:
+        </label>
         <input type="number" step="any" name="QuantityLeft" id="modalQuantityLeft" required>
         
         <label for="modalSupplierCode">Supplier:</label>
@@ -294,9 +361,11 @@
           <!-- Options populated dynamically -->
         </select>
         
-        <label>Use Category:</label>
+        <label>
+          Use Category<span style="color:red;">*</span>:
+        </label>
         <div id="modalUseCategoryRadios">
-          <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC">
+          <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC" required>
           <label for="useCategoryWBC">WBC</label>
           <input type="radio" name="UseCategory" value="GGB" id="useCategoryGGB">
           <label for="useCategoryGGB">GGB</label>
@@ -304,13 +373,17 @@
           <label for="useCategoryBoth">Both</label>
         </div>
         
-        <label>Expiration Date:</label>
+        <label for="modalExpirationDate">
+          Expiration Date<span style="color:red;">*</span>:
+        </label>
         <input type="date" name="ExpirationDate" id="modalExpirationDate" required>
         
         <label>Status:</label>
         <input type="text" name="Status" id="modalStatus" readonly>
         
-        <label>Cost:</label>
+        <label for="modalCost">
+          Cost<span style="color:red;">*</span>:
+        </label>
         <input type="number" step="any" name="Cost" id="modalCost" required>
         
         <div class="button-container">
