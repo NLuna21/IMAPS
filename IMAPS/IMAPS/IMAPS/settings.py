@@ -11,7 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -75,18 +76,17 @@ WSGI_APPLICATION = 'IMAPS.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'imaps',       # Your DB name
-        'USER': 'root',           # Your MySQL username
-        'PASSWORD': '1234',   # Your MySQL password
-        'HOST': '127.0.0.1',    # Use '127.0.0.1' instead of 'localhost'
-        'PORT': '3306',         # Use 3306 if running a standard MySQL server
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-        }
+    "default": {
+        "ENGINE":   os.getenv("DB_ENGINE", "django.db.backends.sqlite3"),
+        "NAME":     os.getenv("DB_NAME", BASE_DIR / "db.sqlite3"),
+        "USER":     os.getenv("DB_USER", ""),
+        "PASSWORD": os.getenv("DB_PASS", ""),
+        "HOST":     os.getenv("DB_HOST", ""),
+        "PORT":     os.getenv("DB_PORT", ""),
+        "OPTIONS":  {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"},
     }
 }
+
 
 
 # Password validation
