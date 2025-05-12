@@ -126,7 +126,7 @@ class UsedIngredientForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = UsedIngredient
-        exclude = ['UsedIngredientBatchCode', 'RawMaterialName']
+        exclude = ['UsedIngredientBatchCode', 'RawMaterialName', 'change_status']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }
@@ -148,7 +148,7 @@ class UsedPackagingForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     )
     class Meta:
         model = UsedPackaging
-        exclude = ['USEDPackagingBatchCode','RawMaterialName']
+        exclude = ['USEDPackagingBatchCode','RawMaterialName','change_status']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }

@@ -98,36 +98,87 @@ def ingredients_create(request):
     if request.method == 'POST':
         form = IngredientsRawMaterialsForm(request.POST)
         if form.is_valid():
-            existing_batch = form.cleaned_data.get('existing_batch')
-            quantity_bought = form.cleaned_data.get('QuantityBought')
-            if existing_batch and existing_batch != 'None':
-                try:
-                    # Get the existing record (assumed to be unique by batch code)
-                    existing_record = IngredientsRawMaterials.objects.get(RawMaterialBatchCode=existing_batch)
-                    
-                    # Create a new record but don't save yet:
-                    new_record = form.save(commit=False)
-                    # The new record's QuantityLeft should be just its own QuantityBought
-                    # before combining; then we compute the new total:
-                    new_record.QuantityLeft = new_record.QuantityBought
-                    new_record.save()
-                    
-                    # Now compute the combined quantity left:
-                    combined = existing_record.QuantityLeft + new_record.QuantityLeft
-                    # Update both records to show the same combined total.
-                    existing_record.QuantityLeft = combined
-                    existing_record.save()
-                    
-                    new_record.QuantityLeft = combined
-                    new_record.save()
-                except IngredientsRawMaterials.DoesNotExist:
-                    form.save()
+            # Create the new record
+            new_record = form.save(commit=False)
+            raw_material_name = new_record.RawMaterialName
+            use_category = new_record.UseCategory
+            
+            # Set initial QuantityLeft to QuantityBought for the new record
+            new_record.QuantityLeft = new_record.QuantityBought
+            new_record.save()
+            
+            if use_category == 'Both':
+                # For Both, only consider other Both records
+                both_records = IngredientsRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    change_status='active',
+                    UseCategory='Both'  # Only Both records
+                )
+                
+                # Calculate totals for Both category only
+                total_bought = (
+                    both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                )
+                total_used = UsedIngredient.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    UseCategory='Both'  # Only Both usage
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                new_quantity_left = max(total_bought - total_used, 0)
+                # Update all categories
+                all_records = IngredientsRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    change_status='active'
+                )
+                all_records.update(QuantityLeft=new_quantity_left)
+                
             else:
-                form.save()
+                # For WBC or GGB, include quantities from Both category
+                both_records = IngredientsRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    change_status='active',
+                    UseCategory='Both'
+                )
+                category_records = IngredientsRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    change_status='active',
+                    UseCategory=use_category
+                )
+                
+                # Calculate totals including Both category
+                both_bought = both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                category_bought = category_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                total_bought = both_bought + category_bought
+                
+                both_used = UsedIngredient.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    UseCategory='Both'
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                category_used = UsedIngredient.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    UseCategory=use_category
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                total_used = both_used + category_used
+                
+                new_quantity_left = max(total_bought - total_used, 0)
+                # Only update the specific category records
+                category_records.update(QuantityLeft=new_quantity_left)
+
+            # Log the creation
+            ChangeLog.objects.create(
+                table_name='IngredientsRawMaterials',
+                column='QuantityLeft',
+                prev='0',
+                new=str(new_quantity_left),
+                item_pk=new_record.pk,
+                item_name=f"{raw_material_name} ({use_category})"
+            )
         else:
             messages.error(request, "Ingredient creation error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-            pass
+                         "; ".join([f"{field}: {', '.join(errors)}" 
+                                  for field, errors in form.errors.items()]))
     return redirect('ingredients_list')
 
 def ingredients_update(request, pk):
@@ -137,8 +188,10 @@ def ingredients_update(request, pk):
             return HttpResponse("Incorrect password", status=403)
         form = IngredientsRawMaterialsUpdateForm(request.POST, instance=ingredient)
         if form.is_valid():
+            print("Form is valid")  # Debug print
             # Get the cleaned form data
             cleaned_data = form.cleaned_data
+            print("Cleaned data:", cleaned_data)  # Debug print
             
             # Store old values before update
             old_values = {
@@ -152,6 +205,7 @@ def ingredients_update(request, pk):
                 'Cost': ingredient.Cost,
                 'change_status': ingredient.change_status
             }
+            print("Old values:", old_values)  # Debug print
             
             # Save the form
             updated = form.save(commit=False)
@@ -162,12 +216,14 @@ def ingredients_update(request, pk):
             for field, old_value in old_values.items():
                 if field in cleaned_data:
                     new_value = cleaned_data[field]
+                    print(f"Comparing {field}: old={old_value}, new={new_value}")  # Debug print
                     # Special handling for foreign key fields
                     if field == 'SupplierCode':
                         old_value = str(old_value)
                         new_value = str(new_value)
                     # Compare and log if different
                     if str(old_value) != str(new_value):
+                        print(f"Creating log for {field}")  # Debug print
                         ChangeLog.objects.create(
                             table_name='ingredients_raw_materials',
                             column=field,
@@ -191,6 +247,7 @@ def ingredients_update(request, pk):
             # Log QuantityLeft change if it changed
             old_quantity_left = ingredient.QuantityLeft
             if old_quantity_left != new_left:
+                print(f"Creating log for QuantityLeft")  # Debug print
                 ChangeLog.objects.create(
                     table_name='ingredients_raw_materials',
                     column='QuantityLeft',
@@ -202,6 +259,7 @@ def ingredients_update(request, pk):
             
             batches.update(QuantityLeft=new_left)
         else:
+            print("Form errors:", form.errors)  # Debug print
             messages.error(request, "Ingredient update error: " +
                            "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
     return redirect('ingredients_list')
@@ -343,40 +401,90 @@ def packaging_create(request):
     if request.method == 'POST':
         form = PackagingRawMaterialsForm(request.POST)
         if form.is_valid():
-            existing_batch = form.cleaned_data.get('existing_batch')
-            quantity_bought = form.cleaned_data.get('QuantityBought')
-            if existing_batch and existing_batch != 'None':
-                try:
-                    # Get the existing packaging record by its batch code.
-                    existing_record = PackagingRawMaterials.objects.get(PackagingBatchCode=existing_batch)
-                    
-                    # Create a new record from the form but do not save yet.
-                    new_record = form.save(commit=False)
-                    
-                    # Override the following fields with the values from the existing record.
-                    new_record.ContainerSize = existing_record.ContainerSize
-                    new_record.RawMaterialName = existing_record.RawMaterialName
-                    new_record.UseCategory = existing_record.UseCategory
-                    # Ensure the new record's QuantityLeft starts as its own QuantityBought.
-                    new_record.QuantityLeft = new_record.QuantityBought
-                    new_record.save()
-                    
-                    # Calculate the combined available quantity.
-                    combined_quantity = existing_record.QuantityLeft + new_record.QuantityLeft
-                    # Update both records to share the new combined quantity.
-                    existing_record.QuantityLeft = combined_quantity
-                    existing_record.save()
-                    
-                    new_record.QuantityLeft = combined_quantity
-                    new_record.save()
-                except PackagingRawMaterials.DoesNotExist:
-                    form.save()
+            # Create the new record
+            new_record = form.save(commit=False)
+            raw_material_name = new_record.RawMaterialName
+            container_size = new_record.ContainerSize
+            use_category = new_record.UseCategory
+            
+            # Set initial QuantityLeft to QuantityBought for the new record
+            new_record.QuantityLeft = new_record.QuantityBought
+            new_record.save()
+            
+            if use_category == 'Both':
+                # For Both, only consider Both records (including the new one)
+                both_records = PackagingRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    ContainerSize=container_size,
+                    change_status='active',
+                    UseCategory='Both'  # Only Both records
+                )
+                
+                # Calculate totals for Both category only
+                total_bought = (
+                    both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                )
+                total_used = UsedPackaging.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    PackagingRawMaterialBatchCode__ContainerSize=container_size,
+                    UseCategory='Both'  # Only Both usage
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                new_quantity_left = max(total_bought - total_used, 0)
+                
+                # Only update Both records
+                both_records.update(QuantityLeft=new_quantity_left)
             else:
-                form.save()
+                # For WBC or GGB, include quantities from Both category
+                both_records = PackagingRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    ContainerSize=container_size,
+                    change_status='active',
+                    UseCategory='Both'
+                )
+                category_records = PackagingRawMaterials.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    ContainerSize=container_size,
+                    change_status='active',
+                    UseCategory=use_category
+                )
+                
+                # Calculate totals including Both category
+                both_bought = both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                category_bought = category_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                total_bought = both_bought + category_bought
+                
+                both_used = UsedPackaging.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    PackagingRawMaterialBatchCode__ContainerSize=container_size,
+                    UseCategory='Both'
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                category_used = UsedPackaging.objects.filter(
+                    RawMaterialName=raw_material_name,
+                    PackagingRawMaterialBatchCode__ContainerSize=container_size,
+                    UseCategory=use_category
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                total_used = both_used + category_used
+                
+                new_quantity_left = max(total_bought - total_used, 0)
+                # Only update the specific category records
+                category_records.update(QuantityLeft=new_quantity_left)
+
+            # Log the creation
+            ChangeLog.objects.create(
+                table_name='PackagingRawMaterials',
+                column='QuantityLeft',
+                prev='0',
+                new=str(new_quantity_left),
+                item_pk=new_record.pk,
+                item_name=f"{raw_material_name} - {container_size} ({use_category})"
+            )
         else:
             messages.error(request, "Packaging creation error: " +
-            "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-            pass
+                         "; ".join([f"{field}: {', '.join(errors)}" 
+                                  for field, errors in form.errors.items()]))
     return redirect('packaging_list')
 
 def packaging_update(request, pk):
@@ -386,8 +494,10 @@ def packaging_update(request, pk):
             return HttpResponse("Incorrect password", status=403)
         form = PackagingRawMaterialsUpdateForm(request.POST, instance=material)
         if form.is_valid():
+            print("Form is valid")  # Debug print
             # Get the cleaned form data
             cleaned_data = form.cleaned_data
+            print("Cleaned data:", cleaned_data)  # Debug print
             
             # Store old values before update
             old_values = {
@@ -401,6 +511,7 @@ def packaging_update(request, pk):
                 'Cost': material.Cost,
                 'change_status': material.change_status
             }
+            print("Old values:", old_values)  # Debug print
             
             # Save the form
             updated = form.save(commit=False)
@@ -411,12 +522,14 @@ def packaging_update(request, pk):
             for field, old_value in old_values.items():
                 if field in cleaned_data:
                     new_value = cleaned_data[field]
+                    print(f"Comparing {field}: old={old_value}, new={new_value}")  # Debug print
                     # Special handling for foreign key fields
                     if field == 'SupplierCode':
                         old_value = str(old_value)
                         new_value = str(new_value)
                     # Compare and log if different
                     if str(old_value) != str(new_value):
+                        print(f"Creating log for {field}")  # Debug print
                         ChangeLog.objects.create(
                             table_name='packaging',
                             column=field,
@@ -440,6 +553,7 @@ def packaging_update(request, pk):
             # Log QuantityLeft change if it changed
             old_quantity_left = material.QuantityLeft
             if old_quantity_left != new_left:
+                print(f"Creating log for QuantityLeft")  # Debug print
                 ChangeLog.objects.create(
                     table_name='packaging',
                     column='QuantityLeft',
@@ -451,6 +565,7 @@ def packaging_update(request, pk):
             
             batches.update(QuantityLeft=new_left)
         else:
+            print("Form errors:", form.errors)  # Debug print
             messages.error(request, "Packaging update error: " +
                            "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
     return redirect('packaging_list')
@@ -497,11 +612,12 @@ def used_packaging_create(request):
         if form.is_valid():
             # --- 1. Save but let us tweak fields first -----------------------
             used_pack = form.save(commit=False)
-            # Auto-fill the name from the selected batch
+
             used_pack.RawMaterialName = (
                 used_pack.PackagingRawMaterialBatchCode.RawMaterialName
             )
-            used_pack.save()                      # now the row is persisted
+            used_pack.change_status = 'active'  # Set default change_status
+            used_pack.save()  # now the row is persisted
 
             # --- 2. Recompute the running balance ---------------------------
             # Every batch for this packaging material mirrors the *same* balance,
@@ -512,7 +628,6 @@ def used_packaging_create(request):
             current_balance = batches.first().QuantityLeft if batches.exists() else 0
             new_balance = max(current_balance - used_pack.QuantityUsed, 0)
 
-            # Update all sibling batches to reflect the new balance in one go
             batches.update(QuantityLeft=new_balance)
         else:
             messages.error(
