@@ -35,7 +35,7 @@ class SupplierForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = Supplier
-        fields = '__all__'
+        exclude = ['change_status']  # Exclude change_status from form
 
 class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
@@ -53,7 +53,7 @@ class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = IngredientsRawMaterials
-        exclude = ['QuantityLeft', 'RawMaterialBatchCode','Status']
+        exclude = ['QuantityLeft', 'RawMaterialBatchCode', 'Status', 'change_status']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
             'ExpirationDate': forms.DateInput(attrs={'type': 'date'}),
@@ -61,9 +61,14 @@ class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter suppliers by category (ingredients)
-        self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Ingredient', 'Both'])
-        batches = IngredientsRawMaterials.objects.values_list('RawMaterialBatchCode', flat=True)
+        # Filter suppliers by category (ingredients) and active status
+        self.fields['SupplierCode'].queryset = Supplier.objects.filter(
+            Category__in=['Ingredient', 'Both'],
+            change_status='active'
+        )
+        batches = IngredientsRawMaterials.objects.filter(
+            change_status='active'
+        ).values_list('RawMaterialBatchCode', flat=True)
         choices = [('None', 'None')]
         choices += [(batch, batch) for batch in batches]
         self.fields['existing_batch'].choices = choices
@@ -92,16 +97,21 @@ class PackagingRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = PackagingRawMaterials
-        exclude = ['QuantityLeft', 'PackagingBatchCode','Status']
+        exclude = ['QuantityLeft', 'PackagingBatchCode', 'Status', 'change_status']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Filter suppliers by category (packaging)
-        self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Packaging', 'Both'])
-        batches = PackagingRawMaterials.objects.values_list('PackagingBatchCode', flat=True)
+        # Filter suppliers by category (packaging) and active status
+        self.fields['SupplierCode'].queryset = Supplier.objects.filter(
+            Category__in=['Packaging', 'Both'],
+            change_status='active'
+        )
+        batches = PackagingRawMaterials.objects.filter(
+            change_status='active'
+        ).values_list('PackagingBatchCode', flat=True)
         choices = [('None', 'None')]
         choices += [(batch, batch) for batch in batches]
         self.fields['existing_batch'].choices = choices
@@ -164,20 +174,20 @@ class IngredientsRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.Model
     
     class Meta:
         model = IngredientsRawMaterials
-        fields = ['SupplierCode', 'RawMaterialName', 'DateDelivered', 'QuantityBought', 'QuantityLeft', 'UseCategory', 'ExpirationDate', 'Status', 'Cost']
+        fields = ['SupplierCode', 'RawMaterialName', 'DateDelivered', 'QuantityBought', 
+                 'UseCategory', 'ExpirationDate', 'Status', 'Cost']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
             'ExpirationDate': forms.DateInput(attrs={'type': 'date'}),
         }
     
-    def clean(self):
-        cleaned_data = super().clean()
-        qty_bought = cleaned_data.get('QuantityBought')
-        qty_left = cleaned_data.get('QuantityLeft')
-        if qty_bought is not None and qty_left is not None:
-            if qty_left > qty_bought:
-                raise ValidationError("Quantity Left cannot be greater than Quantity Bought.")
-        return cleaned_data
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter suppliers by category (ingredients) and active status
+        self.fields['SupplierCode'].queryset = Supplier.objects.filter(
+            Category__in=['Ingredient', 'Both'],
+            change_status='active'
+        )
 
 class PackagingRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
@@ -189,16 +199,16 @@ class PackagingRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.ModelFo
     
     class Meta:
         model = PackagingRawMaterials
-        fields = ['SupplierCode', 'RawMaterialName', 'ContainerSize', 'DateDelivered', 'QuantityBought', 'QuantityLeft', 'UseCategory', 'Status', 'Cost']
+        fields = ['SupplierCode', 'RawMaterialName', 'ContainerSize', 'DateDelivered', 
+                 'QuantityBought', 'UseCategory', 'Status', 'Cost']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
         }
     
-    def clean(self):
-        cleaned_data = super().clean()
-        qty_bought = cleaned_data.get('QuantityBought')
-        qty_left = cleaned_data.get('QuantityLeft')
-        if qty_bought is not None and qty_left is not None:
-            if qty_left > qty_bought:
-                raise ValidationError("Quantity Left cannot be greater than Quantity Bought.")
-        return cleaned_data
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter suppliers by category (packaging) and active status
+        self.fields['SupplierCode'].queryset = Supplier.objects.filter(
+            Category__in=['Packaging', 'Both'],
+            change_status='active'
+        )

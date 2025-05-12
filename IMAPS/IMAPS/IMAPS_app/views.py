@@ -9,7 +9,8 @@ from .models import (
     IngredientsRawMaterials,
     PackagingRawMaterials,
     UsedIngredient,
-    UsedPackaging
+    UsedPackaging,
+    ChangeLog
 )
 from .forms import (
     SupplierForm,
@@ -28,7 +29,7 @@ PASSWORD = "test123"
 #      SUPPLIERS    #
 #####################
 def suppliers_list(request):
-    suppliers = Supplier.objects.all()
+    suppliers = Supplier.objects.filter(change_status='active')
     create_form = SupplierForm()
     return render(request, 'suppliers.html', {
         'suppliers': suppliers,
@@ -63,14 +64,24 @@ def supplier_delete(request, pk):
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        supplier.delete()
+        
+        # Instead of deleting, mark as deleted and log the change
+        supplier.change_status = 'deleted'
+        supplier.save()
+        
+        ChangeLog.objects.create(
+            table_name='Supplier',
+            column='change_status',
+            prev='active',
+            new='deleted'
+        )
     return redirect('suppliers_list')
 
 ##########################
 #  INGREDIENTS RAW MATERIALS  #
 ##########################
 def ingredients_list(request):
-    ingredients = IngredientsRawMaterials.objects.all()
+    ingredients = IngredientsRawMaterials.objects.filter(change_status='active')
     used_ings = UsedIngredient.objects.all()
     create_form = IngredientsRawMaterialsForm()
     used_ing_create_form = UsedIngredientForm()
@@ -94,9 +105,9 @@ def ingredients_create(request):
                     # Get the existing record (assumed to be unique by batch code)
                     existing_record = IngredientsRawMaterials.objects.get(RawMaterialBatchCode=existing_batch)
                     
-                    # Create a new record but don’t save yet:
+                    # Create a new record but don't save yet:
                     new_record = form.save(commit=False)
-                    # The new record’s QuantityLeft should be just its own QuantityBought
+                    # The new record's QuantityLeft should be just its own QuantityBought
                     # before combining; then we compute the new total:
                     new_record.QuantityLeft = new_record.QuantityBought
                     new_record.save()
@@ -120,32 +131,80 @@ def ingredients_create(request):
     return redirect('ingredients_list')
 
 def ingredients_update(request, pk):
-    ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
+    ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk, change_status='active')
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
         form = IngredientsRawMaterialsUpdateForm(request.POST, instance=ingredient)
         if form.is_valid():
-            updated = form.save()   # persists DateDelivered, ExpirationDate, etc.
+            # Get the cleaned form data
+            cleaned_data = form.cleaned_data
+            
+            # Store old values before update
+            old_values = {
+                'RawMaterialName': ingredient.RawMaterialName,
+                'SupplierCode': ingredient.SupplierCode,
+                'DateDelivered': ingredient.DateDelivered,
+                'QuantityBought': ingredient.QuantityBought,
+                'UseCategory': ingredient.UseCategory,
+                'ExpirationDate': ingredient.ExpirationDate,
+                'Status': ingredient.Status,
+                'Cost': ingredient.Cost,
+                'change_status': ingredient.change_status
+            }
+            
+            # Save the form
+            updated = form.save(commit=False)
+            updated.change_status = 'active'  # Ensure status remains active
+            updated.save()
+            
+            # Compare old and new values from the form data
+            for field, old_value in old_values.items():
+                if field in cleaned_data:
+                    new_value = cleaned_data[field]
+                    # Special handling for foreign key fields
+                    if field == 'SupplierCode':
+                        old_value = str(old_value)
+                        new_value = str(new_value)
+                    # Compare and log if different
+                    if str(old_value) != str(new_value):
+                        ChangeLog.objects.create(
+                            table_name='ingredients_raw_materials',
+                            column=field,
+                            prev=str(old_value),
+                            new=str(new_value),
+                            item_pk=pk,
+                            item_name=updated.RawMaterialName
+                        )
+            
             # recompute QuantityLeft across all batches
             batches = IngredientsRawMaterials.objects.filter(
-                RawMaterialName=updated.RawMaterialName
+                RawMaterialName=updated.RawMaterialName,
+                change_status='active'
             )
             total_bought = batches.aggregate(total=Sum('QuantityBought'))['total'] or 0
-            total_used   = UsedIngredient.objects.filter(
+            total_used = UsedIngredient.objects.filter(
                 RawMaterialName=updated.RawMaterialName
             ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
             new_left = max(total_bought - total_used, 0)
+            
+            # Log QuantityLeft change if it changed
+            old_quantity_left = ingredient.QuantityLeft
+            if old_quantity_left != new_left:
+                ChangeLog.objects.create(
+                    table_name='ingredients_raw_materials',
+                    column='QuantityLeft',
+                    prev=str(old_quantity_left),
+                    new=str(new_left),
+                    item_pk=pk,
+                    item_name=updated.RawMaterialName
+                )
+            
             batches.update(QuantityLeft=new_left)
-            return redirect('ingredients_list')
-    else:
-        # GET → prepopulate form (including date widget)
-        form = IngredientsRawMaterialsUpdateForm(instance=ingredient)
-
-    return render(request, 'ingredients_update.html', {
-        'form': form,
-        'ingredient': ingredient
-    })
+        else:
+            messages.error(request, "Ingredient update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('ingredients_list')
 
 def ingredients_delete(request, pk):
     ingredient = get_object_or_404(IngredientsRawMaterials, pk=pk)
@@ -155,10 +214,23 @@ def ingredients_delete(request, pk):
             return HttpResponse("Incorrect password", status=403)
 
         raw_name = ingredient.RawMaterialName        # ① remember the family
-        ingredient.delete()                          # ② remove the row
+        
+        # Instead of deleting, mark as deleted and log the change
+        ingredient.change_status = 'deleted'
+        ingredient.save()
+        
+        ChangeLog.objects.create(
+            table_name='IngredientsRawMaterials',
+            column='change_status',
+            prev='active',
+            new='deleted'
+        )
 
-        # ③–④ recalc QuantityLeft across the survivors
-        batches = IngredientsRawMaterials.objects.filter(RawMaterialName=raw_name)
+        # ③–④ recalc QuantityLeft across the survivors (only active records)
+        batches = IngredientsRawMaterials.objects.filter(
+            RawMaterialName=raw_name,
+            change_status='active'  # Only consider active records
+        )
         if batches.exists():
             total_bought = batches.aggregate(t=Sum("QuantityBought"))["t"] or 0
             total_used   = UsedIngredient.objects.filter(
@@ -253,7 +325,7 @@ def used_ingredients_delete(request, pk):
 #  PACKAGING RAW MATERIALS  #
 ##############################
 def packaging_list(request):
-    materials = PackagingRawMaterials.objects.all()
+    materials = PackagingRawMaterials.objects.filter(change_status='active')
     used_packs = UsedPackaging.objects.all()
     create_form = PackagingRawMaterialsForm()
     used_pack_create_form = UsedPackagingForm()
@@ -308,32 +380,80 @@ def packaging_create(request):
     return redirect('packaging_list')
 
 def packaging_update(request, pk):
-    material = get_object_or_404(PackagingRawMaterials, pk=pk)
+    material = get_object_or_404(PackagingRawMaterials, pk=pk, change_status='active')
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
         form = PackagingRawMaterialsUpdateForm(request.POST, instance=material)
         if form.is_valid():
-            updated = form.save()   # persists DateDelivered, ContainerSize, etc.
+            # Get the cleaned form data
+            cleaned_data = form.cleaned_data
+            
+            # Store old values before update
+            old_values = {
+                'RawMaterialName': material.RawMaterialName,
+                'SupplierCode': material.SupplierCode,
+                'ContainerSize': material.ContainerSize,
+                'DateDelivered': material.DateDelivered,
+                'QuantityBought': material.QuantityBought,
+                'UseCategory': material.UseCategory,
+                'Status': material.Status,
+                'Cost': material.Cost,
+                'change_status': material.change_status
+            }
+            
+            # Save the form
+            updated = form.save(commit=False)
+            updated.change_status = 'active'  # Ensure status remains active
+            updated.save()
+            
+            # Compare old and new values from the form data
+            for field, old_value in old_values.items():
+                if field in cleaned_data:
+                    new_value = cleaned_data[field]
+                    # Special handling for foreign key fields
+                    if field == 'SupplierCode':
+                        old_value = str(old_value)
+                        new_value = str(new_value)
+                    # Compare and log if different
+                    if str(old_value) != str(new_value):
+                        ChangeLog.objects.create(
+                            table_name='packaging',
+                            column=field,
+                            prev=str(old_value),
+                            new=str(new_value),
+                            item_pk=pk,
+                            item_name=updated.RawMaterialName
+                        )
+            
             # recompute QuantityLeft across all packaging batches
             batches = PackagingRawMaterials.objects.filter(
-                RawMaterialName=updated.RawMaterialName
+                RawMaterialName=updated.RawMaterialName,
+                change_status='active'
             )
             total_bought = batches.aggregate(total=Sum('QuantityBought'))['total'] or 0
-            total_used   = UsedPackaging.objects.filter(
+            total_used = UsedPackaging.objects.filter(
                 RawMaterialName=updated.RawMaterialName
             ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
             new_left = max(total_bought - total_used, 0)
+            
+            # Log QuantityLeft change if it changed
+            old_quantity_left = material.QuantityLeft
+            if old_quantity_left != new_left:
+                ChangeLog.objects.create(
+                    table_name='packaging',
+                    column='QuantityLeft',
+                    prev=str(old_quantity_left),
+                    new=str(new_left),
+                    item_pk=pk,
+                    item_name=updated.RawMaterialName
+                )
+            
             batches.update(QuantityLeft=new_left)
-            return redirect('packaging_list')
-    else:
-        # GET → prepopulate form
-        form = PackagingRawMaterialsUpdateForm(instance=material)
-
-    return render(request, 'packaging_update.html', {
-        'form': form,
-        'material': material
-    })
+        else:
+            messages.error(request, "Packaging update error: " +
+                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+    return redirect('packaging_list')
 
 def packaging_delete(request, pk):
     packaging = get_object_or_404(PackagingRawMaterials, pk=pk)
@@ -343,10 +463,23 @@ def packaging_delete(request, pk):
             return HttpResponse("Incorrect password", status=403)
 
         raw_name = packaging.RawMaterialName          # ① remember the family
-        packaging.delete()                            # ② remove the row
+        
+        # Instead of deleting, mark as deleted and log the change
+        packaging.change_status = 'deleted'
+        packaging.save()
+        
+        ChangeLog.objects.create(
+            table_name='PackagingRawMaterials',
+            column='change_status',
+            prev='active',
+            new='deleted'
+        )
 
-        # ③ – ④ recalc QuantityLeft across remaining batches
-        batches = PackagingRawMaterials.objects.filter(RawMaterialName=raw_name)
+        # ③ – ④ recalc QuantityLeft across remaining batches (only active records)
+        batches = PackagingRawMaterials.objects.filter(
+            RawMaterialName=raw_name,
+            change_status='active'  # Only consider active records
+        )
         if batches.exists():
             total_bought = batches.aggregate(t=Sum("QuantityBought"))["t"] or 0
             total_used   = UsedPackaging.objects.filter(
@@ -471,26 +604,29 @@ def report_summary(request):
 
 def supplier_list_packaging(request):
     suppliers = Supplier.objects.filter(
-        Category__in=['Packaging', 'Both']
+        Category__in=['Packaging', 'Both'],
+        change_status='active'  # Only show active suppliers
     ).values('SupplierCode', 'SupplierName')
     return JsonResponse({'suppliers': list(suppliers)}, safe=False)
 
 def supplier_list_ingredients(request):
     suppliers = Supplier.objects.filter(
-        Category__in=['Ingredient', 'Both']
+        Category__in=['Ingredient', 'Both'],
+        change_status='active'  # Only show active suppliers
     ).values('SupplierCode', 'SupplierName')
     return JsonResponse({'suppliers': list(suppliers)}, safe=False)
 
 from django.shortcuts import render, redirect
 from django.contrib   import messages
-from .models          import ChangeLog
 
 def change_log_create(request):
     if request.method == 'POST':
         table_name = request.POST.get('table_name')
-        column     = request.POST.get('column')
-        prev       = request.POST.get('prev')
-        new        = request.POST.get('new')
+        column = request.POST.get('column')
+        prev = request.POST.get('prev')
+        new = request.POST.get('new')
+        item_pk = request.POST.get('item_pk')
+        item_name = request.POST.get('item_name')
 
         if not (table_name and column):
             messages.error(request, "Missing table_name or column.")
@@ -499,7 +635,9 @@ def change_log_create(request):
                 table_name=table_name,
                 column=column,
                 prev=prev,
-                new=new
+                new=new,
+                item_pk=item_pk,
+                item_name=item_name
             )
     # return to wherever you came from; or default to ingredients history
     return redirect(request.META.get('HTTP_REFERER', 'history_ingredients_list'))

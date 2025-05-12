@@ -1,0 +1,10 @@
+2025-05-13 01:56:37,494 - IMAPS_app.views - DEBUG - Old values for packaging 2: {'RawMaterialName': 'Plastic Mini Bottles', 'QuantityBought': 100, 'UseCategory': 'Both', 'Status': '', 'Cost': 150.0, 'ContainerSize': '20ml', 'DateDelivered': datetime.date(2025, 5, 8)}
+2025-05-13 01:56:37,497 - IMAPS_app.views - DEBUG - Attempting to log change for field Status
+2025-05-13 01:56:37,499 - IMAPS_app.views - INFO - Successfully logged change for field Status
+2025-05-13 01:57:01,928 - IMAPS_app.views - DEBUG - Old values for packaging 2: {'RawMaterialName': 'Plastic Mini Bottles', 'QuantityBought': 100, 'UseCategory': 'Both', 'Status': '', 'Cost': 150.0, 'ContainerSize': '20ml', 'DateDelivered': datetime.date(2025, 5, 8)}
+2025-05-13 01:57:01,930 - IMAPS_app.views - DEBUG - Attempting to log change for field Status
+2025-05-13 01:57:01,932 - IMAPS_app.views - INFO - Successfully logged change for field Status
+2025-05-13 02:08:52,531 - IMAPS_app.views - DEBUG - Old values for packaging 2: {'RawMaterialName': 'Plastic Mini Bottle', 'QuantityBought': 100, 'UseCategory': 'Both', 'Status': '', 'Cost': 150.0, 'ContainerSize': '20ml', 'DateDelivered': datetime.date(2025, 5, 8)}
+2025-05-13 02:08:52,536 - IMAPS_app.views - DEBUG - Attempting to log change for field Status
+2025-05-13 02:08:52,539 - IMAPS_app.views - INFO - Successfully logged change for field Status
+2025-05-13 02:08:52,543 - IMAPS_app.views - INFO - Successfully logged QuantityLeft change

@@ -21,6 +21,11 @@ class Supplier(models.Model):
     EmailAddress = models.CharField(max_length=320, blank=True, null=True)
     ContactNumber = models.CharField(max_length=18, blank=True, null=True)
     PointPerson = models.CharField(max_length=255, blank=True, null=True)
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def __str__(self):
         return f"{self.SupplierName} ({self.SupplierCode})"
@@ -48,6 +53,11 @@ class IngredientsRawMaterials(models.Model):
     ExpirationDate = models.DateField()
     Status = models.CharField(max_length=15, blank=True)
     Cost = models.FloatField(default=0, blank=True, null=True)
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def save(self, *args, **kwargs):
         # Determine if we need to regenerate batch code
@@ -105,6 +115,11 @@ class PackagingRawMaterials(models.Model):
     Cost = models.FloatField(default=0, blank=True, null=True)
     ContainerSize = models.CharField(max_length=50, blank=True, null=True)
     DateDelivered = models.DateField()
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def save(self, *args, **kwargs):
         regenerate = False
@@ -205,15 +220,16 @@ class UsedPackaging(models.Model):
 from django.db import models
 
 class ChangeLog(models.Model):
-    table_name = models.CharField("Table",  max_length=64)
-    date       = models.DateTimeField(       auto_now_add=True)
-    column     = models.CharField("Column", max_length=64)
-    prev       = models.TextField("Prev",    blank=True, null=True)
-    new        = models.TextField("New",     blank=True, null=True)
+    date = models.DateTimeField(auto_now_add=True)
+    table_name = models.CharField(max_length=100, null=True, blank=True)
+    column = models.CharField(max_length=100, null=True, blank=True)
+    prev = models.TextField(null=True, blank=True)
+    new = models.TextField(null=True, blank=True)
+    item_pk = models.IntegerField(null=True, blank=True)
+    item_name = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
-        db_table = "change_log"
-        ordering = ["-date"]
+        ordering = ['-date']
 
     def __str__(self):
         return f"{self.table_name}.{self.column} @ {self.date}"
