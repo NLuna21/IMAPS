@@ -484,7 +484,6 @@ def supplier_list_ingredients(request):
 
 from django.shortcuts import render, redirect
 from .models import ChangeLog
-from .forms import ChangeLogForm
 
 def change_log_list(request):
     logs = ChangeLog.objects.all().order_by('-date')
@@ -492,10 +491,23 @@ def change_log_list(request):
 
 def change_log_create(request):
     if request.method == 'POST':
-        form = ChangeLogForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('change_log_list')
-    else:
-        form = ChangeLogForm()
-    return render(request, 'change_log/form.html', {'form': form})
+            table_name = request.POST.get('table_name')
+            record_id  = request.POST.get('record_id')
+            column      = request.POST.get('column')
+            prev        = request.POST.get('prev')
+            new         = request.POST.get('new')
+            user        = request.user if request.user.is_authenticated else None
+
+            # basic validation
+            if not (table_name and record_id and column):
+                messages.error(request, "Missing required fields for change log.")
+            else:
+                ChangeLog.objects.create(
+                    table_name=table_name,
+                    record_id=record_id,
+                    user=user,
+                    column=column,
+                    prev=prev,
+                    new=new,
+                )
+    return redirect('change_log_list')
