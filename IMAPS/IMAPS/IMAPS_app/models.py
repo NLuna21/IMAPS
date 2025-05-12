@@ -96,8 +96,8 @@ class PackagingRawMaterials(models.Model):
     QuantityBought = models.IntegerField(default=0)
     QuantityLeft = models.IntegerField(default=0)
     USECATEGORY_CHOICES = [
-        ('WBC', 'WBC'),
-        ('GGB', 'GGB'),
+        ('WBC', 'White Labeled Clients'),
+        ('GGB', 'Glow Glass Beauty'),
         ('Both', 'Both'),
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES)

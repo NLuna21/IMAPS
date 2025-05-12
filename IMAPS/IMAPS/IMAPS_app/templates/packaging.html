@@ -31,6 +31,39 @@
       border: 1px solid #f5c6cb;
       border-radius: 4px;
     }
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-left: 0px;
+      margin-top: 5px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .radio-option input[type="radio"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .radio-option label {
+      cursor: pointer;
+      padding-left: 6px;
+      font-size: 14px;
+      margin-bottom: 0;
+      font-weight: normal;
+    }
+
+    /* Add styles for the form group containing radio buttons */
+    .form-group:has(.radio-group) {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -195,7 +228,24 @@
         {% endif %}
         :
       </label>
-      {{ field }}
+      {% if field.name == 'UseCategory' %}
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC" required>
+            <label for="id_UseCategory_WBC">White Labeled Client</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="UseCategory" value="GGB" id="id_UseCategory_GGB">
+            <label for="id_UseCategory_GGB">Glow Glass Beauty</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="UseCategory" value="Both" id="id_UseCategory_Both">
+            <label for="id_UseCategory_Both">Both</label>
+          </div>
+        </div>
+      {% else %}
+        {{ field }}
+      {% endif %}
       {% for err in field.errors %}
         <div class="text-danger">{{ err }}</div>
       {% endfor %}
@@ -276,16 +326,20 @@
           </select>
         </div>
         <div class="form-group">
-          <label>
-            Use Category<span style="color:red;">*</span>:
-          </label>
-          <div id="packUseCategoryRadios">
-            <input type="radio" name="UseCategory" value="WBC" id="packUseCategoryWBC">
-            <label for="packUseCategoryWBC">WBC</label>
-            <input type="radio" name="UseCategory" value="GGB" id="packUseCategoryGGB">
-            <label for="packUseCategoryGGB">GGB</label>
-            <input type="radio" name="UseCategory" value="Both" id="packUseCategoryBoth">
-            <label for="packUseCategoryBoth">Both</label>
+          <label>Use Category<span style="color:red;">*</span>:</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC" required>
+              <label for="id_UseCategory_WBC">White Labeled Client</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="GGB" id="id_UseCategory_GGB">
+              <label for="id_UseCategory_GGB">Glow Glass Beauty</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="Both" id="id_UseCategory_Both">
+              <label for="id_UseCategory_Both">Both</label>
+            </div>
           </div>
         </div>
         <div class="form-group">
@@ -364,36 +418,23 @@
           </label>
           <input type="number" id="id_QuantityUsed" name="QuantityUsed" min="1" required>
         </div>
-          <div class="form-group">
-            <label>Use Category<span style="color:red;">*</span>:</label>
-            <div id="id_UseCategoryRadios">
-              <input
-                type="radio"
-                name="UseCategory"
-                id="id_UseCategory_WBC"
-                value="WBC"
-                required
-              >
-              <label for="id_UseCategory_WBC">WBC</label>
-          
-              <input
-                type="radio"
-                name="UseCategory"
-                id="id_UseCategory_GGB"
-                value="GGB"
-              >
-              <label for="id_UseCategory_GGB">GGB</label>
-          
-              <input
-                type="radio"
-                name="UseCategory"
-                id="id_UseCategory_Both"
-                value="Both"
-              >
-              <label for="id_UseCategory_Both">Both</label>
+        <div class="form-group">
+          <label>Use Category<span style="color:red;">*</span>:</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC_sub" required>
+              <label for="id_UseCategory_WBC_sub">White Labeled Client</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="GGB" id="id_UseCategory_GGB_sub">
+              <label for="id_UseCategory_GGB_sub">Glow Glass Beauty</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="Both" id="id_UseCategory_Both_sub">
+              <label for="id_UseCategory_Both_sub">Both</label>
             </div>
           </div>
-          
+        </div>
         <div class="form-group">
           <label for="id_DateUsed">
             Date Used<span style="color:red;">*</span>:

@@ -1,3 +1,94 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  /* Form styling */
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group input[type="date"],
+  .form-group input[type="password"],
+  .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* Radio button styling */
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 5px;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+
+  .radio-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .radio-option label {
+    cursor: pointer;
+    padding-left: 6px;
+    font-size: 14px;
+    margin-bottom: 0;
+    font-weight: normal;
+  }
+
+  /* Required field asterisk */
+  .required-asterisk {
+    color: red;
+    margin-left: 2px;
+  }
+
+  /* Form group with radio buttons */
+  .form-group:has(.radio-group) {
+    margin-bottom: 10px;
+  }
+
+  /* Right-align specific numeric columns */
+  table tbody td {
+    text-align: left;
+  }
+  table tbody td:nth-child(3),
+  table tbody td:nth-child(4),
+  table tbody td:nth-child(9) {
+    text-align: right;
+  }
+  /* Spacing for form groups in modals */
+  .modal-content .form-group {
+    margin-bottom: 20px;
+  }
+  /* Basic styling for alert messages */
+  .alert {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+  }
+</style>
+
 <!DOCTYPE html>
 <html lang="en">
 {% load static %}
@@ -8,30 +99,6 @@
   <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    /* Right-align specific numeric columns */
-    table tbody td {
-      text-align: left;
-    }
-    table tbody td:nth-child(3),
-    table tbody td:nth-child(4),
-    table tbody td:nth-child(9) {
-      text-align: right;
-    }
-    /* Spacing for form groups in modals */
-    .modal-content .form-group {
-      margin-bottom: 20px;
-    }
-    /* Basic styling for alert messages */
-    .alert {
-      background-color: #f8d7da;
-      color: #721c24;
-      padding: 10px;
-      margin-bottom: 10px;
-      border: 1px solid #f5c6cb;
-      border-radius: 4px;
-    }
-  </style>
 </head>
 <body>
   <!-- SIDEBAR -->
@@ -229,37 +296,47 @@
         <h2>Add Ingredient</h2>
         <span class="close" onclick="closeModal('addIngredientModal')">&times;</span>
       </div>
-      <form
-  method="POST"
-  action="{% url 'ingredients_create' %}"
-  id="createIngredientForm"
-  class="form-vertical"
->
-  {% csrf_token %}
-
-  {% for field in create_form %}
-    <div class="form-group">
-      <label for="{{ field.id_for_label }}">
-        {{ field.label }}:
-      </label>
-      {{ field }}
-      {% for err in field.errors %}
-        <div class="text-danger">{{ err }}</div>
-      {% endfor %}
-    </div>
-  {% endfor %}
-
-  <div class="button-container">
-    <button type="button" class="button-outline"
-            onclick="closeModal('addIngredientModal')">
-      Discard
-    </button>
-    <button type="submit" class="update-button">
-      Save
-    </button>
-  </div>
-</form>
-
+      <form method="POST" action="{% url 'ingredients_create' %}" id="createIngredientForm" class="form-vertical">
+        {% csrf_token %}
+        {% for field in create_form %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}
+                <span class="required-asterisk">*</span>
+              {% endif %}
+              :
+            </label>
+            {% if field.name == 'UseCategory' %}
+              <div class="radio-group">
+                {% for radio in field %}
+                  <div class="radio-option">
+                    {{ radio.tag }}
+                    <label for="{{ radio.id_for_label }}">
+                      {% if radio.choice_value == 'WBC' %}
+                        White Labeled Client
+                      {% elif radio.choice_value == 'GGB' %}
+                        Glow Glass Beauty
+                      {% else %}
+                        {{ radio.choice_label }}
+                      {% endif %}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              {{ field }}
+            {% endif %}
+            {% for err in field.errors %}
+              <div class="text-danger">{{ err }}</div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('addIngredientModal')">Discard</button>
+          <button type="submit" class="update-button">Save</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -267,51 +344,39 @@
   <div id="subtractIngredientModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Subtract Ingredients Materials</h2>
+        <h2>Subtract Ingredients</h2>
         <span class="close" onclick="closeModal('subtractIngredientModal')">&times;</span>
       </div>
-      <form
-      method="POST"
-      action="{% url 'used_ingredients_create' %}"
-      id="createUsedIngredientForm"
-      class="form-vertical"
-    >
-      {% csrf_token %}
-    
-      {% for field in used_ing_create_form %}
+      <form method="POST" action="{% url 'used_ingredients_create' %}" id="subtractIngredientForm">
+        {% csrf_token %}
         <div class="form-group">
-          <label for="{{ field.id_for_label }}">
-            {{ field.label }}
-
-            :
+          <label for="subtractPassword">
+            Password<span class="required-asterisk">*</span>:
           </label>
-    
-          {{ field }}
-    
-          {% if field.help_text %}
-            <small class="form-text text-muted">{{ field.help_text }}</small>
-          {% endif %}
-    
-          {% for err in field.errors %}
-            <div class="text-danger">{{ err }}</div>
-          {% endfor %}
+          <input type="password" id="subtractPassword" name="password" required>
         </div>
-      {% endfor %}
-    
-      <div class="button-container">
-        <button
-          type="button"
-          class="button-outline"
-          onclick="closeModal('subtractIngredientModal')"
-        >
-          Discard
-        </button>
-        <button type="submit" class="update-button">
-          Confirm
-        </button>
-      </div>
-    </form>
-    
+        <div class="form-group">
+          <label>Use Category<span class="required-asterisk">*</span>:</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC_sub" required>
+              <label for="id_UseCategory_WBC_sub">White Labeled Client</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="GGB" id="id_UseCategory_GGB_sub">
+              <label for="id_UseCategory_GGB_sub">Glow Glass Beauty</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="Both" id="id_UseCategory_Both_sub">
+              <label for="id_UseCategory_Both_sub">Both</label>
+            </div>
+          </div>
+        </div>
+        <div class="button-container">
+          <button type="button" class="button-outline" onclick="closeModal('subtractIngredientModal')">Discard</button>
+          <button type="submit" class="update-button">Confirm</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -319,14 +384,14 @@
   <div id="updateIngredientModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Update Ingredients (Code: <span id="modalRawMaterialBatchCode"></span>)</h2>
+        <h2>Update Ingredient (Code: <span id="modalRawMaterialBatchCode"></span>)</h2>
         <span class="close" onclick="closeModal('updateIngredientModal')">&times;</span>
       </div>
-      <form method="POST" id="updateIngredientForm" onsubmit="return validateIngredientUpdate();">
+      <form method="POST" id="updateIngredientForm" class="form-vertical" onsubmit="return validateIngredientUpdate();">
         {% csrf_token %}
         <div class="form-group">
           <label for="updatePassword">
-            Password<span style="color:red;">*</span>:
+            Password<span class="required-asterisk">*</span>:
           </label>
           <input type="password" id="updatePassword" name="password" required>
         </div>
@@ -336,22 +401,22 @@
         <input type="hidden" id="modalUsed" name="used" value="">
         
         <label for="modalRawMaterialName">
-          Ingredient Name<span style="color:red;">*</span>:
+          Ingredient Name<span class="required-asterisk">*</span>:
         </label>
         <input type="text" name="RawMaterialName" id="modalRawMaterialName" required>
   
         <label for="modalDateDelivered">
-          Date Delivered<span style="color:red;">*</span>:
+          Date Delivered<span class="required-asterisk">*</span>:
         </label>
         <input type="date" name="DateDelivered" id="modalDateDelivered" required>
   
         <label for="modalQuantityBought">
-          Quantity Bought<span style="color:red;">*</span>:
+          Quantity Bought<span class="required-asterisk">*</span>:
         </label>
         <input type="number" step="any" name="QuantityBought" id="modalQuantityBought" required>
   
         <label for="modalQuantityLeft">
-          Quantity Left<span style="color:red;">*</span>:
+          Quantity Left<span class="required-asterisk">*</span>:
         </label>
         <input type="number" step="any" name="QuantityLeft" id="modalQuantityLeft" required>
         
@@ -361,20 +426,24 @@
           <!-- Options populated dynamically -->
         </select>
         
-        <label>
-          Use Category<span style="color:red;">*</span>:
-        </label>
-        <div id="modalUseCategoryRadios">
-          <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC" required>
-          <label for="useCategoryWBC">WBC</label>
-          <input type="radio" name="UseCategory" value="GGB" id="useCategoryGGB">
-          <label for="useCategoryGGB">GGB</label>
-          <input type="radio" name="UseCategory" value="Both" id="useCategoryBoth">
-          <label for="useCategoryBoth">Both</label>
+        <label>Use Category<span class="required-asterisk">*</span>:</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC">
+            <label for="useCategoryWBC">White Labeled Client</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="UseCategory" value="GGB" id="useCategoryGGB">
+            <label for="useCategoryGGB">Glow Glass Beauty</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="UseCategory" value="Both" id="useCategoryBoth">
+            <label for="useCategoryBoth">Both</label>
+          </div>
         </div>
         
         <label for="modalExpirationDate">
-          Expiration Date<span style="color:red;">*</span>:
+          Expiration Date<span class="required-asterisk">*</span>:
         </label>
         <input type="date" name="ExpirationDate" id="modalExpirationDate" required>
         
@@ -382,7 +451,7 @@
         <input type="text" name="Status" id="modalStatus" readonly>
         
         <label for="modalCost">
-          Cost<span style="color:red;">*</span>:
+          Cost<span class="required-asterisk">*</span>:
         </label>
         <input type="number" step="any" name="Cost" id="modalCost" required>
         
@@ -717,3 +786,5 @@
 </script>
 </body>
 </html>
+
+{% endblock %}

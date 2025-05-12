@@ -1,3 +1,83 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  /* Form styling */
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="email"],
+  .form-group input[type="tel"],
+  .form-group input[type="password"],
+  .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  /* Radio button styling */
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 5px;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+
+  .radio-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .radio-option label {
+    cursor: pointer;
+    padding-left: 6px;
+    font-size: 14px;
+    margin-bottom: 0;
+    font-weight: normal;
+  }
+
+  /* Required field asterisk */
+  .required-asterisk {
+    color: red;
+    margin-left: 2px;
+  }
+
+  /* Form group with radio buttons */
+  .form-group:has(.radio-group) {
+    margin-bottom: 10px;
+  }
+
+  /* Alert messages */
+  .alert {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+  }
+
+  /* Rest of your existing styles */
+</style>
+
 <!DOCTYPE html>
 <html lang="en">
 {% load static %}
@@ -150,27 +230,36 @@
         <h2>Add Supplier</h2>
         <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'supplier_create' %}" class="form-grid" id="createSupplierForm">
+      <form method="POST" action="{% url 'supplier_create' %}" id="createSupplierForm" class="form-vertical">
         {% csrf_token %}
         {% for field in create_form %}
-    <div class="form-group">
-      <label for="{{ field.id_for_label }}">
-        {{ field.label }}
-        :
-      </label>
-
-      {{ field }}
-
-      {# show errors, if any #}
-      {% if field.errors %}
-        <div class="text-danger">
-          {{ field.errors|join:", " }}
-        </div>
-      {% endif %}
-    </div>
-  {% endfor %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}
+                <span class="required-asterisk">*</span>
+              {% endif %}
+              :
+            </label>
+            {% if field.name == 'Category' %}
+              <div class="radio-group">
+                {% for radio in field %}
+                  <div class="radio-option">
+                    {{ radio.tag }}
+                    <label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              {{ field }}
+            {% endif %}
+            {% for err in field.errors %}
+              <div class="text-danger">{{ err }}</div>
+            {% endfor %}
+          </div>
+        {% endfor %}
         <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Back</button>
+          <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Discard</button>
           <button type="submit" class="update-button">Save</button>
         </div>
       </form>
@@ -182,48 +271,59 @@
   <div id="updateSupplierModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Update Supplier</h2>
+        <h2>Update Supplier (Code: <span id="modalSupplierCode"></span>)</h2>
         <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
       </div>
-      <form method="POST" id="updateSupplierForm">
+      <form method="POST" id="updateSupplierForm" class="form-vertical">
         {% csrf_token %}
-        <label for="supplier_code_update">Supplier Code:</label>
-        <!-- Display SupplierCode but make it read-only -->
-        <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
-        
-        <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
-        <input type="text" name="SupplierName" id="supplier_name_update" required>
-        
-        <label for="category_update">
-          Category<span style="color:red;">*</span>:
-        </label>
-        <select name="Category" id="category_update" required>
-          <option value="Ingredient">Ingredient</option>
-          <option value="Packaging">Packaging</option>
-          <option value="Both">Both</option>
-        </select>
-        
-        <label for="social_media_update">Social Media:</label>
-        <input type="text" name="SocialMedia" id="social_media_update">
-        
-        <label for="email_address_update">Email Address:</label>
-        <input type="email" name="EmailAddress" id="email_address_update">
-        
-        <label for="contact_number_update">Contact Number:</label>
-        <input type="text" name="ContactNumber" id="contact_number_update">
-        
-        <label for="point_person_update">Point Person:</label>
-        <input type="text" name="PointPerson" id="point_person_update">
-        
         <div class="form-group">
-          <label for="deleteUsedPassword">
-            Password<span style="color:red;">*</span>:
+          <label for="updatePassword">
+            Password<span class="required-asterisk">*</span>:
           </label>
-          <input type="password" id="deleteUsedPassword" name="password" required>
+          <input type="password" id="updatePassword" name="password" required>
+        </div>
+        <div class="form-group">
+          <label for="SupplierName">
+            Supplier Name<span class="required-asterisk">*</span>:
+          </label>
+          <input type="text" id="SupplierName" name="SupplierName" required>
+        </div>
+        <div class="form-group">
+          <label>Category<span class="required-asterisk">*</span>:</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" name="Category" value="Ingredient" id="categoryIngredient">
+              <label for="categoryIngredient">Ingredient</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="Category" value="Packaging" id="categoryPackaging">
+              <label for="categoryPackaging">Packaging</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="Category" value="Both" id="categoryBoth">
+              <label for="categoryBoth">Both</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="SocialMedia">Social Media:</label>
+          <input type="text" id="SocialMedia" name="SocialMedia">
+        </div>
+        <div class="form-group">
+          <label for="EmailAddress">Email Address:</label>
+          <input type="email" id="EmailAddress" name="EmailAddress">
+        </div>
+        <div class="form-group">
+          <label for="ContactNumber">Contact Number:</label>
+          <input type="tel" id="ContactNumber" name="ContactNumber">
+        </div>
+        <div class="form-group">
+          <label for="PointPerson">Point Person:</label>
+          <input type="text" id="PointPerson" name="PointPerson">
         </div>
         <div class="button-container">
+          <button type="submit" class="update-button">Update</button>
           <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
-          <button type="submit" class="update-button">Save Changes</button>
         </div>
       </form>
     </div>
@@ -241,8 +341,10 @@
       <form method="POST" id="deleteSupplierForm">
         {% csrf_token %}
         <div class="form-group">
-          <label for="deleteUsedPassword">Password:</label>
-          <input type="password" id="deleteUsedPassword" name="password" required>
+          <label for="deletePassword">
+            Password<span class="required-asterisk">*</span>:
+          </label>
+          <input type="password" id="deletePassword" name="password" required>
         </div>
         <div class="button-container">
           <button type="submit" class="update-button">Delete</button>
@@ -364,3 +466,5 @@
 
 </body>
 </html>
+
+{% endblock %}
