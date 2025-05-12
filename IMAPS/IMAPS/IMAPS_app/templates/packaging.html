@@ -503,8 +503,8 @@
       <form method="POST" id="deleteUsedPackagingForm" onsubmit="return confirm('Are you sure you want to delete this record?');">
         {% csrf_token %}
         <div class="form-group">
-          <label for="deleteUsedPackagingPassword">Password:</label>
-          <input type="password" id="deleteUsedPackagingPassword" name="password" required>
+          <label for="deletePassword">Password:</label>
+          <input type="password" id="deletePassword" name="password" required>
         </div>
         <div class="button-container">
           <button type="submit" class="update-button">Delete</button>
@@ -618,8 +618,6 @@
       }
       let pk = packagingRow.getAttribute("data-packaging-pk");
       let formattedDateDelivered = formatDateToISO(dateDelivered);
-      let form = document.getElementById("updatePackagingForm");
-      form.action = `/packaging/update/${pk}/`;
       document.getElementById("modalPackagingBatchCode").textContent = packagingBatchCode;
       document.getElementById("modalPackagingBatchCodeHidden").value = packagingBatchCode;
       document.getElementById('RawMaterialName').value = rawMaterialName;
