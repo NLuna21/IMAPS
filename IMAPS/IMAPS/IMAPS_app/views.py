@@ -480,3 +480,16 @@ def supplier_list_ingredients(request):
         Category__in=['Ingredient', 'Both']
     ).values('SupplierCode', 'SupplierName')
     return JsonResponse({'suppliers': list(suppliers)}, safe=False)
+
+# IMAPS_app/views.py
+
+from django.shortcuts import render
+from auditlog.models import LogEntry
+
+def audit_log_list(request):
+    entries = (
+        LogEntry.objects
+        .select_related('content_type')
+        .order_by('-timestamp')[:100]
+    )
+    return render(request, 'audit_log_list.html', {'entries': entries})

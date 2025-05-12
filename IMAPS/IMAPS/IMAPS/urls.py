@@ -62,4 +62,7 @@ urlpatterns = [
     path('api/suppliers/ingredients', views.supplier_list_ingredients, name='supplier_list_ingredients'),
     path('api/suppliers/packaging', views.supplier_list_packaging, name='supplier_list_packaging'),
 
+
+    path('audit-log/', views.audit_log_list, name='audit_log_list'),
+
 ]
