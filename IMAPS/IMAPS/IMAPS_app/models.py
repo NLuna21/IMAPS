@@ -196,3 +196,24 @@ class UsedPackaging(models.Model):
 
     def __str__(self):
         return f"{self.USEDPackagingBatchCode} - {self.RawMaterialName}"
+
+
+
+
+# -- changelog
+
+from django.db import models
+
+class ChangeLog(models.Model):
+    table_name = models.CharField("Table",  max_length=64)
+    date       = models.DateTimeField(       auto_now_add=True)
+    column     = models.CharField("Column", max_length=64)
+    prev       = models.TextField("Prev",    blank=True, null=True)
+    new        = models.TextField("New",     blank=True, null=True)
+
+    class Meta:
+        db_table = "change_log"
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.table_name}.{self.column} @ {self.date}"

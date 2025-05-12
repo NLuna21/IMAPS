@@ -480,3 +480,22 @@ def supplier_list_ingredients(request):
         Category__in=['Ingredient', 'Both']
     ).values('SupplierCode', 'SupplierName')
     return JsonResponse({'suppliers': list(suppliers)}, safe=False)
+
+
+from django.shortcuts import render, redirect
+from .models import ChangeLog
+from .forms import ChangeLogForm
+
+def change_log_list(request):
+    logs = ChangeLog.objects.all().order_by('-date')
+    return render(request, 'change_log/list.html', {'change_logs': logs})
+
+def change_log_create(request):
+    if request.method == 'POST':
+        form = ChangeLogForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('change_log_list')
+    else:
+        form = ChangeLogForm()
+    return render(request, 'change_log/form.html', {'form': form})
