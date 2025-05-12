@@ -62,8 +62,4 @@ urlpatterns = [
     path('api/suppliers/ingredients', views.supplier_list_ingredients, name='supplier_list_ingredients'),
     path('api/suppliers/packaging', views.supplier_list_packaging, name='supplier_list_packaging'),
 
-
-    path('history/ingredients/',views.history_ingredients_list,name='history_ingredients_list'),
-    path('history/packaging/',views.history_packaging_list,name='history_packaging_list'),
-    path('history/create/',views.change_log_create,name='change_log_create'),
 ]
