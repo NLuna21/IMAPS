@@ -481,33 +481,43 @@ def supplier_list_ingredients(request):
     ).values('SupplierCode', 'SupplierName')
     return JsonResponse({'suppliers': list(suppliers)}, safe=False)
 
-
 from django.shortcuts import render, redirect
-from .models import ChangeLog
-
-def change_log_list(request):
-    logs = ChangeLog.objects.all().order_by('-date')
-    return render(request, 'change_log/list.html', {'change_logs': logs})
+from django.contrib   import messages
+from .models          import ChangeLog
 
 def change_log_create(request):
     if request.method == 'POST':
-            table_name = request.POST.get('table_name')
-            record_id  = request.POST.get('record_id')
-            column      = request.POST.get('column')
-            prev        = request.POST.get('prev')
-            new         = request.POST.get('new')
-            user        = request.user if request.user.is_authenticated else None
+        table_name = request.POST.get('table_name')
+        column     = request.POST.get('column')
+        prev       = request.POST.get('prev')
+        new        = request.POST.get('new')
 
-            # basic validation
-            if not (table_name and record_id and column):
-                messages.error(request, "Missing required fields for change log.")
-            else:
-                ChangeLog.objects.create(
-                    table_name=table_name,
-                    record_id=record_id,
-                    user=user,
-                    column=column,
-                    prev=prev,
-                    new=new,
-                )
-    return redirect('change_log_list')
+        if not (table_name and column):
+            messages.error(request, "Missing table_name or column.")
+        else:
+            ChangeLog.objects.create(
+                table_name=table_name,
+                column=column,
+                prev=prev,
+                new=new
+            )
+    # return to wherever you came from; or default to ingredients history
+    return redirect(request.META.get('HTTP_REFERER', 'history_ingredients_list'))
+
+def history_ingredients_list(request):
+    """
+    Read‐only view: all ChangeLog entries for ingredients.
+    """
+    logs = ChangeLog.objects.filter(
+        table_name='ingredients_raw_materials'
+    ).order_by('-date')
+    return render(request, 'history_ingredients_list.html', {'logs': logs})
+
+def history_packaging_list(request):
+    """
+    Read‐only view: all ChangeLog entries for packaging.
+    """
+    logs = ChangeLog.objects.filter(
+        table_name='packaging'
+    ).order_by('-date')
+    return render(request, 'history_packaging_list.html', {'logs': logs})
