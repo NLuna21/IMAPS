@@ -36,6 +36,9 @@ class SupplierForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     class Meta:
         model = Supplier
         fields = '__all__'
+        widgets = {
+            'change_status': forms.Select(attrs={'id': 'changeStatus'}),
+        }
 
 class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(
@@ -138,7 +141,7 @@ class UsedPackagingForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     )
     class Meta:
         model = UsedPackaging
-        exclude = ['USEDPackagingBatchCode','RawMaterialName']
+        exclude = ['USEDPackagingBatchCode','RawMaterialName','change_status']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }
