@@ -218,7 +218,7 @@
             <label for="{{ field.id_for_label }}">
               {{ field.label }}
               {% if field.field.required %}
-                <span class="required-asterisk">*</span>
+                <span style="color:red;">*</span>
               {% endif %}
               :
             </label>
@@ -270,29 +270,10 @@
           </label>
           <input type="password" id="subtractPassword" name="password" required>
         </div>
-        <div>
-          <label for="id_IngredientRawMaterialBatchCode">
-            Ingredient Batch Code<span style="color:red;">*</span>:
-          </label>
-          <select id="id_IngredientRawMaterialBatchCode" name="IngredientRawMaterialBatchCode" required>
-            <option value="">Select Ingredient Batch Code</option>
-            {% for ing in ingredients %}
-            <option value="{{ ing.id }}" data-date-delivered="{{ ing.DateDelivered|date:'Y-m-d' }}">
-              {{ ing.RawMaterialBatchCode }} - {{ ing.RawMaterialName }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label for="id_QuantityUsed">
-            Quantity Used (g,grams)<span style="color:red;">*</span>:
-          </label>
-          <input type="number" id="id_QuantityUsed" name="QuantityUsed" min="1" required>
-        </div>
-        <div>
+        <div class="form-group">
           <label>Use Category<span style="color:red;">*</span>:</label>
-          <div style="margin-top: 10px;">
-            <div>
+          <div class="radio-group">
+            <div class="radio-option">
               <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC_sub" required>
               <label for="id_UseCategory_WBC_sub">White Labeled Client</label>
             </div>
@@ -333,7 +314,7 @@
         {% csrf_token %}
         <div class="form-group">
           <label for="updatePassword">
-            Password<span class="required-asterisk">*</span>:
+            Password<span style="color:red;">*</span>:
           </label>
           <input type="password" id="updatePassword" name="password" required>
         </div>
@@ -343,22 +324,22 @@
         <input type="hidden" id="modalUsed" name="used" value="">
         
         <label for="modalRawMaterialName">
-          Ingredient Name<span class="required-asterisk">*</span>:
+          Ingredient Name<span style="color:red;">*</span>:
         </label>
         <input type="text" name="RawMaterialName" id="modalRawMaterialName" required>
   
         <label for="modalDateDelivered">
-          Date Delivered<span class="required-asterisk">*</span>:
+          Date Delivered<span style="color:red;">*</span>:
         </label>
         <input type="date" name="DateDelivered" id="modalDateDelivered" required>
   
         <label for="modalQuantityBought">
-          Quantity Bought<span class="required-asterisk">*</span>:
+          Quantity Bought<span style="color:red;">*</span>:
         </label>
         <input type="number" step="any" name="QuantityBought" id="modalQuantityBought" required>
   
         <label for="modalQuantityLeft">
-          Quantity Left<span class="required-asterisk">*</span>:
+          Quantity Left<span style="color:red;">*</span>:
         </label>
         <input type="number" step="any" name="QuantityLeft" id="modalQuantityLeft" required>
         
@@ -368,7 +349,7 @@
           <!-- Options populated dynamically -->
         </select>
         
-        <label>Use Category<span class="required-asterisk">*</span>:</label>
+        <label>Use Category<span style="color:red;">*</span>:</label>
         <div class="radio-group">
           <div class="radio-option">
             <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC">
@@ -385,7 +366,7 @@
         </div>
         
         <label for="modalExpirationDate">
-          Expiration Date<span class="required-asterisk">*</span>:
+          Expiration Date<span style="color:red;">*</span>:
         </label>
         <input type="date" name="ExpirationDate" id="modalExpirationDate" required>
         
@@ -393,7 +374,7 @@
         <input type="text" name="Status" id="modalStatus" readonly>
         
         <label for="modalCost">
-          Cost<span class="required-asterisk">*</span>:
+          Cost<span style="color:red;">*</span>:
         </label>
         <input type="number" step="any" name="Cost" id="modalCost" required>
         

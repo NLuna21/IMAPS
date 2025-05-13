@@ -40,7 +40,7 @@ class SupplierForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
             'change_status': forms.Select(attrs={'id': 'changeStatus'}),
         }
 
-class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
+class IngredientsRawMaterialsForm(forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=IngredientsRawMaterials.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,
@@ -79,7 +79,7 @@ class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
             raise ValidationError("Expiration date cannot be before the delivery date.")
         return cleaned_data
 
-class PackagingRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
+class PackagingRawMaterialsForm(forms.ModelForm):
     UseCategory = forms.ChoiceField(
         choices=PackagingRawMaterials.USECATEGORY_CHOICES,
         widget=forms.RadioSelect,
