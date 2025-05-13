@@ -46,6 +46,12 @@
   <!-- MAIN CONTENT -->
   <div class="main-content">
     <h1>Ingredients Inventory</h1>
+    <!-- Error message container -->
+    <div id="mainErrorContainer" class="alert" style="display: none; margin: 0 20px 20px; padding: 15px; border-radius: 4px;">
+      <div id="errorTitle" style="font-weight: bold; margin-bottom: 8px;"></div>
+      <div id="errorContent"></div>
+    </div>
+
     <!-- Messages Block -->
     {% if messages %}
       <div id="messages">
@@ -166,7 +172,7 @@
       <div class="table-container">
         <table>
           <thead>
-            <tr>
+            <tr class="table-header">
               <th>Ingredient Name</th>
               <th>Batch Code</th>
               <th>Quantity Used (g,grams)</th>
@@ -184,12 +190,12 @@
               <td>{{ used.UseCategory }}</td>
               <td>{{ used.DateUsed|date:"d/m/Y" }}</td>
               <td>
-                <button class="button-outline" onclick="openDeleteModalUsedIngredient('{{ used.UsedIngredientBatchCode }}','{{ used.RawMaterialName }}')">Delete</button>
+                <button class="delete-button" onclick="openDeleteModalUsedIngredient('{{ used.UsedIngredientBatchCode }}','{{ used.RawMaterialName }}')">Delete</button>
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="6">No used ingredients found</td>
+              <td colspan="6" style="text-align: center; padding: 20px; color: #666;">No used ingredients found</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -256,32 +262,59 @@
         <h2>Subtract Ingredients</h2>
         <span class="close" onclick="closeModal('subtractIngredientModal')">&times;</span>
       </div>
-      <form method="POST" action="{% url 'used_ingredients_create' %}" id="subtractIngredientForm">
+      <form method="POST" action="{% url 'used_ingredients_create' %}" id="subtractIngredientForm" onsubmit="return handleSubtractIngredient(event);">
         {% csrf_token %}
-        <div class="form-group">
+        <div>
           <label for="subtractPassword">
-            Password<span class="required-asterisk">*</span>:
+            Password<span style="color:red;">*</span>:
           </label>
           <input type="password" id="subtractPassword" name="password" required>
         </div>
-        <div class="form-group">
-          <label>Use Category<span class="required-asterisk">*</span>:</label>
-          <div class="radio-group">
-            <div class="radio-option">
+        <div>
+          <label for="id_IngredientRawMaterialBatchCode">
+            Ingredient Batch Code<span style="color:red;">*</span>:
+          </label>
+          <select id="id_IngredientRawMaterialBatchCode" name="IngredientRawMaterialBatchCode" required>
+            <option value="">Select Ingredient Batch Code</option>
+            {% for ing in ingredients %}
+            <option value="{{ ing.id }}" data-date-delivered="{{ ing.DateDelivered|date:'Y-m-d' }}">
+              {{ ing.RawMaterialBatchCode }} - {{ ing.RawMaterialName }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="id_QuantityUsed">
+            Quantity Used (g,grams)<span style="color:red;">*</span>:
+          </label>
+          <input type="number" id="id_QuantityUsed" name="QuantityUsed" min="1" required>
+        </div>
+        <div>
+          <label>Use Category<span style="color:red;">*</span>:</label>
+          <div style="margin-top: 10px;">
+            <div>
               <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC_sub" required>
               <label for="id_UseCategory_WBC_sub">White Labeled Client</label>
             </div>
-            <div class="radio-option">
+            <div>
               <input type="radio" name="UseCategory" value="GGB" id="id_UseCategory_GGB_sub">
               <label for="id_UseCategory_GGB_sub">Glow Glass Beauty</label>
             </div>
-            <div class="radio-option">
+            <div>
               <input type="radio" name="UseCategory" value="Both" id="id_UseCategory_Both_sub">
               <label for="id_UseCategory_Both_sub">Both</label>
             </div>
           </div>
         </div>
-        <div class="button-container">
+        <div>
+          <label for="id_DateUsed">
+            Date Used<span style="color:red;">*</span>:
+          </label>
+          <input type="date" id="id_DateUsed" name="DateUsed" required>
+        </div>
+        <!-- Hidden field for change_status -->
+        <input type="hidden" name="change_status" value="Used">
+        <div class="button-container" style="margin-top: 20px;">
           <button type="button" class="button-outline" onclick="closeModal('subtractIngredientModal')">Discard</button>
           <button type="submit" class="update-button">Confirm</button>
         </div>
@@ -526,6 +559,50 @@
       document.getElementById('deleteUsedIngredientForm').action = `/used-ingredients/delete/${usedBatchCode}/`;
       openModal('deleteUsedIngredientModal');
     }
+
+    // Add form submit handler for used ingredients delete
+    document.getElementById('deleteUsedIngredientForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const formData = new FormData(form);
+      
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Success case
+          closeModal('deleteUsedIngredientModal');
+          window.location.reload(); // Refresh to show updated quantities
+        } else {
+          // Error case
+          const errorContainer = document.getElementById('mainErrorContainer');
+          const errorTitle = document.getElementById('errorTitle');
+          const errorContent = document.getElementById('errorContent');
+          
+          errorContainer.style.display = 'block';
+          errorContainer.style.backgroundColor = '#f8d7da';
+          errorContainer.style.color = '#721c24';
+          errorContainer.style.border = '1px solid #f5c6cb';
+          
+          errorTitle.textContent = 'Error Deleting Used Ingredient';
+          errorContent.textContent = data.message || 'An error occurred while deleting the used ingredient record.';
+          
+          errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the record. Please try again.');
+      }
+    });
     
     // Update Packaging Modal functions
     function openUpdateModalPackaging(packagingBatchCode, rawMaterialName, containerSize, dateDelivered, qtyBought, qtyLeft, useCategory, cost, supplierCode) {
@@ -692,6 +769,260 @@
   document.getElementById('ingredientsFilterMenu').addEventListener('click', () => {
     alert('Filter panel coming soon...');
   });
+
+  async function handleSubtractIngredient(event) {
+    event.preventDefault();
+    console.log('Form submission started');
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const errorContainer = document.getElementById('mainErrorContainer');
+    const errorTitle = document.getElementById('errorTitle');
+    const errorContent = document.getElementById('errorContent');
+    
+    // Basic validation
+    const batchCode = formData.get('IngredientRawMaterialBatchCode');
+    const quantityUsed = formData.get('QuantityUsed');
+    const dateUsed = formData.get('DateUsed');
+    const useCategory = formData.get('UseCategory');
+    const password = formData.get('password');
+
+    if (!batchCode || !quantityUsed || !dateUsed || !useCategory || !password) {
+      errorContainer.style.display = 'block';
+      errorContainer.style.backgroundColor = '#f8d7da';
+      errorContainer.style.color = '#721c24';
+      errorContainer.style.border = '1px solid #f5c6cb';
+      errorTitle.textContent = 'Validation Error';
+      errorContent.textContent = 'Please fill in all required fields.';
+      errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+
+    try {
+      console.log('Sending form data:', Object.fromEntries(formData));
+      
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      });
+      
+      const data = await response.json();
+      console.log('Server response:', data);
+      
+      if (response.ok) {
+        // Success case
+        window.location.reload();
+        return false;
+      } else {
+        // Error case
+        errorContainer.style.display = 'block';
+        errorContainer.style.backgroundColor = '#f8d7da';
+        errorContainer.style.color = '#721c24';
+        errorContainer.style.border = '1px solid #f5c6cb';
+        
+        errorTitle.textContent = 'Error Creating Used Ingredient Entry';
+        
+        if (data.errors) {
+          const errorList = document.createElement('ul');
+          errorList.style.marginBottom = '0';
+          errorList.style.paddingLeft = '20px';
+          
+          for (const [field, error] of Object.entries(data.errors)) {
+            const li = document.createElement('li');
+            li.textContent = `${field}: ${error}`;
+            errorList.appendChild(li);
+          }
+          
+          errorContent.innerHTML = '';
+          errorContent.appendChild(errorList);
+        } else {
+          errorContent.textContent = data.message || 'An error occurred while creating the used ingredient record.';
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      errorContainer.style.display = 'block';
+      errorContainer.style.backgroundColor = '#f8d7da';
+      errorContainer.style.color = '#721c24';
+      errorContainer.style.border = '1px solid #f5c6cb';
+      errorTitle.textContent = 'System Error';
+      errorContent.textContent = 'An error occurred while processing your request. Please try again.';
+    }
+    
+    // Scroll to error message if shown
+    if (errorContainer.style.display === 'block') {
+      errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Close the modal
+    closeModal('subtractIngredientModal');
+    return false;
+  }
 </script>
+
+<style>
+#subtractIngredientModal .modal-content {
+  max-width: 400px;
+  padding: 20px;
+}
+
+#subtractIngredientModal .modal-header {
+  margin: -20px -20px 20px -20px;
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+  background: #f8f9fa;
+}
+
+#subtractIngredientModal .modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+#subtractIngredientModal form {
+  padding: 0 15px;
+}
+
+#subtractIngredientModal form > div {
+  margin-bottom: 15px;
+}
+
+#subtractIngredientModal label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: normal;
+}
+
+#subtractIngredientModal input[type="password"],
+#subtractIngredientModal input[type="number"],
+#subtractIngredientModal input[type="date"],
+#subtractIngredientModal select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#subtractIngredientModal input[type="radio"] {
+  margin-right: 8px;
+}
+
+#subtractIngredientModal input[type="radio"] + label {
+  display: inline;
+  margin-bottom: 0;
+}
+
+#subtractIngredientModal .button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 20px -15px 0;
+  padding: 15px 15px 0;
+  border-top: 1px solid #eee;
+}
+
+#subtractIngredientModal .button-container button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+#subtractIngredientModal .button-outline {
+  background: white;
+  border: 1px solid #ddd;
+}
+
+#subtractIngredientModal .update-button {
+  background: #007bff;
+  color: white;
+  border: none;
+}
+
+/* History Modal Styles */
+#usedIngredientsHistoryModal .modal-content,
+#usedPackagingHistoryModal .modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#usedIngredientsHistoryModal .modal-header,
+#usedPackagingHistoryModal .modal-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 15px 20px;
+  border-radius: 8px 8px 0 0;
+}
+
+#usedIngredientsHistoryModal .modal-header h2,
+#usedPackagingHistoryModal .modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+#usedIngredientsHistoryModal .table-container,
+#usedPackagingHistoryModal .table-container {
+  padding: 20px;
+}
+
+#usedIngredientsHistoryModal table,
+#usedPackagingHistoryModal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+}
+
+#usedIngredientsHistoryModal th,
+#usedPackagingHistoryModal th {
+  background: #f8f9fa;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #dee2e6;
+}
+
+#usedIngredientsHistoryModal td,
+#usedPackagingHistoryModal td {
+  padding: 12px;
+  border-bottom: 1px solid #dee2e6;
+  color: #333;
+}
+
+#usedIngredientsHistoryModal tr:hover,
+#usedPackagingHistoryModal tr:hover {
+  background-color: #f8f9fa;
+}
+
+#usedIngredientsHistoryModal .delete-button,
+#usedPackagingHistoryModal .delete-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+#usedIngredientsHistoryModal .delete-button:hover,
+#usedPackagingHistoryModal .delete-button:hover {
+  background: #c82333;
+}
+
+/* Responsive table */
+@media screen and (max-width: 768px) {
+  #usedIngredientsHistoryModal .table-container,
+  #usedPackagingHistoryModal .table-container {
+    overflow-x: auto;
+  }
+}
+</style>
 </body>
 </html>

@@ -170,7 +170,8 @@ def ingredients_list(request):
             
             ing.TotalQuantityAvailable = both_total
     
-    used_ings = UsedIngredient.objects.all()
+    # Get only active used ingredients
+    used_ings = UsedIngredient.objects.filter(change_status='active')
     create_form = IngredientsRawMaterialsForm()
     used_ing_create_form = UsedIngredientForm()
     context = {
@@ -186,56 +187,10 @@ def ingredients_create(request):
     if request.method == 'POST':
         form = IngredientsRawMaterialsForm(request.POST)
         if form.is_valid():
-            # Save the new record first
-            new_record = form.save()
-            use_category = new_record.UseCategory
-            
-            # Find matching records with same name
-            matching_records = IngredientsRawMaterials.objects.filter(
-                RawMaterialName=new_record.RawMaterialName
-            )
-            
-            if use_category in ['GGB', 'WBC']:
-                # For GGB/WBC: Update only records of the same category
-                same_category_records = matching_records.filter(UseCategory=use_category)
-                
-                # Calculate total from same category records (excluding the new one)
-                same_category_total = same_category_records.exclude(
-                    id=new_record.id
-                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
-                
-                # Add the new record's quantity
-                total_quantity = same_category_total + new_record.QuantityBought
-                
-                # Get total from 'Both' records if they exist
-                both_total = matching_records.filter(
-                    UseCategory='Both'
-                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
-                
-                # Update all records of the same category with combined total
-                final_total = total_quantity + both_total
-                same_category_records.update(QuantityLeft=final_total)
-                
-            elif use_category == 'Both':
-                # For Both: Update only Both records with total of all Both records
-                both_records = matching_records.filter(UseCategory='Both')
-                both_total = both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-                both_records.update(QuantityLeft=both_total)
-                
-                # Also update GGB records if they exist
-                ggb_records = matching_records.filter(UseCategory='GGB')
-                if ggb_records.exists():
-                    ggb_total = ggb_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-                    # Add the new Both quantity to GGB total
-                    ggb_records.update(QuantityLeft=ggb_total + both_total)
-                
-                # Also update WBC records if they exist
-                wbc_records = matching_records.filter(UseCategory='WBC')
-                if wbc_records.exists():
-                    wbc_total = wbc_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-                    # Add the new Both quantity to WBC total
-                    wbc_records.update(QuantityLeft=wbc_total + both_total)
-                
+            # Simply save the new record with QuantityLeft = QuantityBought
+            new_record = form.save(commit=False)
+            new_record.QuantityLeft = new_record.QuantityBought  # Initial quantity left is same as bought
+            new_record.save()
         else:
             messages.error(request, "Ingredient creation error: " +
                            "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
@@ -248,20 +203,18 @@ def ingredients_update(request, pk):
             return HttpResponse("Incorrect password", status=403)
         form = IngredientsRawMaterialsUpdateForm(request.POST, instance=ingredient)
         if form.is_valid():
-            updated = form.save()   # persists DateDelivered, ExpirationDate, etc.
-            # recompute QuantityLeft across all batches
-            batches = IngredientsRawMaterials.objects.filter(
-                RawMaterialName=updated.RawMaterialName
-            )
-            total_bought = batches.aggregate(total=Sum('QuantityBought'))['total'] or 0
-            total_used   = UsedIngredient.objects.filter(
-                RawMaterialName=updated.RawMaterialName
+            # Calculate used quantity for this specific batch
+            total_used = UsedIngredient.objects.filter(
+                IngredientRawMaterialBatchCode=ingredient
             ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
-            new_left = max(total_bought - total_used, 0)
-            batches.update(QuantityLeft=new_left)
+            
+            # Update only this record
+            updated = form.save(commit=False)
+            updated.QuantityLeft = max(updated.QuantityBought - total_used, 0)
+            updated.save()
+            
             return redirect('ingredients_list')
     else:
-        # GET → prepopulate form (including date widget)
         form = IngredientsRawMaterialsUpdateForm(instance=ingredient)
 
     return render(request, 'ingredients_update.html', {
@@ -329,58 +282,34 @@ def ingredients_delete(request, pk):
 
 
 def used_ingredients_create(request):
-    if request.method == 'POST':
-        form = UsedIngredientForm(request.POST)
-        if form.is_valid():
-            used_ing = form.save()
-            # Get all ingredient records for the same raw material name.
-            qs = IngredientsRawMaterials.objects.filter(RawMaterialName=used_ing.RawMaterialName)
-            total_left = sum(record.QuantityLeft for record in qs)
-            new_total = total_left - used_ing.QuantityUsed
-            if new_total < 0:
-                new_total = 0
-            # Update all records with this new total so they show the same remaining balance.
-            for record in qs:
-                record.QuantityLeft = new_total
-                record.save()
-        else:
-            messages.error(request, "Used ingredient creation error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
-            pass
-    return redirect('ingredients_list')
-
-def used_ingredients_create(request):
     if request.method == "POST":
-        form = UsedIngredientForm(request.POST)
-        if form.is_valid():
-            # 1️⃣  Save later so we can fill-in RawMaterialName automatically
-            used_ing = form.save(commit=False)
-            used_ing.RawMaterialName = (
-                used_ing.IngredientRawMaterialBatchCode.RawMaterialName
-            )
-            used_ing.save()                  # now the UsedIngredient row exists
-
-            # 2️⃣  Recompute the shared running balance for this ingredient
-            batches = IngredientsRawMaterials.objects.filter(
-                RawMaterialName=used_ing.RawMaterialName
-            )
-            current_balance = (
-                batches.first().QuantityLeft if batches.exists() else 0
-            )
-            new_balance = max(current_balance - used_ing.QuantityUsed, 0)
-
-            # 3️⃣  Propagate the new balance to every sibling batch in one query
-            batches.update(QuantityLeft=new_balance)
-        else:
-            messages.error(
-                request,
-                "Used ingredient creation error: "
-                + "; ".join(
-                    f"{field}: {', '.join(errs)}"
-                    for field, errs in form.errors.items()
-                ),
-            )
-    return redirect("ingredients_list")
+        try:
+            form = UsedIngredientForm(request.POST)
+            if form.is_valid():
+                # Create the used ingredient record with active status
+                used_ing = form.save(commit=False)
+                used_ing.RawMaterialName = used_ing.IngredientRawMaterialBatchCode.RawMaterialName
+                used_ing.change_status = 'active'  # Set correct status
+                used_ing.save()
+                
+                # Update the quantity left in the ingredient
+                ingredient = used_ing.IngredientRawMaterialBatchCode
+                ingredient.QuantityLeft = max(ingredient.QuantityLeft - used_ing.QuantityUsed, 0)
+                ingredient.save()
+                
+                return JsonResponse({"status": "success", "message": "Used ingredient record created successfully"})
+            else:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Validation failed",
+                    "errors": {field: str(errors[0]) for field, errors in form.errors.items()}
+                }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error creating used ingredient record: {str(e)}"
+            }, status=500)
+    return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 def used_ingredients_update(request, pk):
     used_ing = get_object_or_404(UsedIngredient, pk=pk)
@@ -400,26 +329,73 @@ def used_ingredients_delete(request, pk):
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        ingredient = used_ing.IngredientRawMaterialBatchCode
-        ingredient.QuantityLeft += used_ing.QuantityUsed
-        ingredient.save()
-        used_ing.delete()
+        
+        try:
+            # Add the quantity back to the ingredient
+            ingredient = used_ing.IngredientRawMaterialBatchCode
+            ingredient.QuantityLeft += used_ing.QuantityUsed
+            ingredient.save()
+            
+            # Mark as deleted instead of actually deleting
+            used_ing.change_status = 'deleted'
+            used_ing.save()
+            
+            return JsonResponse({
+                "status": "success",
+                "message": "Used ingredient record deleted successfully"
+            })
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error deleting used ingredient record: {str(e)}"
+            }, status=500)
     return redirect('ingredients_list')
 
 ##############################
 #  PACKAGING RAW MATERIALS  #
 ##############################
 def packaging_list(request):
-    # Only show active records
+    # Get all active packaging materials
     materials = PackagingRawMaterials.objects.filter(change_status='active')
-    used_packs = UsedPackaging.objects.filter(change_status='active')
+    
+    # Calculate total quantity available for each packaging material
+    for mat in materials:
+        # Get all records with same name and container size
+        matching_records = PackagingRawMaterials.objects.filter(
+            RawMaterialName=mat.RawMaterialName,
+            ContainerSize=mat.ContainerSize,
+            change_status='active'
+        )
+        
+        if mat.UseCategory in ['GGB', 'WBC']:
+            # For GGB/WBC: Get same category total + Both total
+            same_category_total = matching_records.filter(
+                UseCategory=mat.UseCategory
+            ).aggregate(total=Sum('QuantityLeft'))['total'] or 0
+            
+            both_total = matching_records.filter(
+                UseCategory='Both'
+            ).aggregate(total=Sum('QuantityLeft'))['total'] or 0
+            
+            mat.TotalQuantityAvailable = same_category_total + both_total
+            
+        elif mat.UseCategory == 'Both':
+            # For Both: Only show Both total
+            both_total = matching_records.filter(
+                UseCategory='Both'
+            ).aggregate(total=Sum('QuantityLeft'))['total'] or 0
+            
+            mat.TotalQuantityAvailable = both_total
+    
+    # Get only active used packaging
+    used_packaging = UsedPackaging.objects.filter(change_status='active')
     create_form = PackagingRawMaterialsForm()
-    used_pack_create_form = UsedPackagingForm()
+    used_packaging_create_form = UsedPackagingForm()
     context = {
         'materials': materials,
-        'used_packs': used_packs,
+        'used_packaging': used_packaging,
         'create_form': create_form,
-        'used_pack_create_form': used_pack_create_form,
+        'used_packaging_create_form': used_packaging_create_form,
     }
     return render(request, 'packaging.html', context)
 
@@ -429,58 +405,10 @@ def packaging_create(request):
     if request.method == 'POST':
         form = PackagingRawMaterialsForm(request.POST)
         if form.is_valid():
-            # Save the new record first
-            new_record = form.save()
-            use_category = new_record.UseCategory
-            
-            # Find matching records with same name and container size
-            matching_records = PackagingRawMaterials.objects.filter(
-                RawMaterialName=new_record.RawMaterialName,
-                ContainerSize=new_record.ContainerSize,
-                change_status='active'
-            )
-            
-            if use_category in ['GGB', 'WBC']:
-                # For GGB/WBC: Update only records of the same category
-                same_category_records = matching_records.filter(UseCategory=use_category)
-                
-                # Calculate total from same category records (excluding the new one)
-                same_category_total = same_category_records.exclude(
-                    id=new_record.id
-                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
-                
-                # Add the new record's quantity
-                total_quantity = same_category_total + new_record.QuantityBought
-                
-                # Get total from 'Both' records if they exist
-                both_total = matching_records.filter(
-                    UseCategory='Both'
-                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
-                
-                # Update all records of the same category with combined total
-                final_total = total_quantity + both_total
-                same_category_records.update(QuantityLeft=final_total)
-                
-            elif use_category == 'Both':
-                # For Both: Update only Both records with total of all Both records
-                both_records = matching_records.filter(UseCategory='Both')
-                both_total = both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-                both_records.update(QuantityLeft=both_total)
-                
-                # Also update GGB records if they exist
-                ggb_records = matching_records.filter(UseCategory='GGB')
-                if ggb_records.exists():
-                    ggb_total = ggb_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-                    # Add the new Both quantity to GGB total
-                    ggb_records.update(QuantityLeft=ggb_total + both_total)
-                
-                # Also update WBC records if they exist
-                wbc_records = matching_records.filter(UseCategory='WBC')
-                if wbc_records.exists():
-                    wbc_total = wbc_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-                    # Add the new Both quantity to WBC total
-                    wbc_records.update(QuantityLeft=wbc_total + both_total)
-                
+            # Simply save the new record with QuantityLeft = QuantityBought
+            new_record = form.save(commit=False)
+            new_record.QuantityLeft = new_record.QuantityBought  # Initial quantity left is same as bought
+            new_record.save()
         else:
             messages.error(request, "Packaging creation error: " +
             "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
@@ -490,29 +418,45 @@ def packaging_update(request, pk):
     material = get_object_or_404(PackagingRawMaterials, pk=pk)
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
-            return HttpResponse("Incorrect password", status=403)
+            return JsonResponse({
+                "status": "error",
+                "message": "Incorrect password"
+            }, status=403)
+            
         form = PackagingRawMaterialsUpdateForm(request.POST, instance=material)
         if form.is_valid():
-            updated = form.save()   # persists DateDelivered, ContainerSize, etc.
-            # recompute QuantityLeft across all packaging batches
-            batches = PackagingRawMaterials.objects.filter(
-                RawMaterialName=updated.RawMaterialName
-            )
-            total_bought = batches.aggregate(total=Sum('QuantityBought'))['total'] or 0
-            total_used   = UsedPackaging.objects.filter(
-                RawMaterialName=updated.RawMaterialName
-            ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
-            new_left = max(total_bought - total_used, 0)
-            batches.update(QuantityLeft=new_left)
-            return redirect('packaging_list')
-    else:
-        # GET → prepopulate form
-        form = PackagingRawMaterialsUpdateForm(instance=material)
-
-    return render(request, 'packaging_update.html', {
-        'form': form,
-        'material': material
-    })
+            try:
+                # Calculate used quantity for this specific batch
+                total_used = UsedPackaging.objects.filter(
+                    PackagingRawMaterialBatchCode=material
+                ).aggregate(total=Sum('QuantityUsed'))['total'] or 0
+                
+                # Update only this record
+                updated = form.save(commit=False)
+                updated.QuantityLeft = max(updated.QuantityBought - total_used, 0)
+                updated.save()
+                
+                return JsonResponse({
+                    "status": "success",
+                    "message": "Packaging material updated successfully"
+                })
+            except Exception as e:
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Error updating packaging material: {str(e)}"
+                }, status=500)
+        else:
+            errors = {field: error[0] for field, error in form.errors.items()}
+            return JsonResponse({
+                "status": "error",
+                "message": "Form validation failed",
+                "errors": errors
+            }, status=400)
+    
+    return JsonResponse({
+        "status": "error",
+        "message": "Invalid request method"
+    }, status=405)
 
 def packaging_delete(request, pk):
     packaging = get_object_or_404(PackagingRawMaterials, pk=pk)
@@ -525,57 +469,37 @@ def packaging_delete(request, pk):
         packaging.change_status = 'deleted'
         packaging.save()
 
-        # Update quantities for remaining active records
-        raw_name = packaging.RawMaterialName
-        container_size = packaging.ContainerSize
-        
-        # Only consider active records for the calculations
-        matching_records = PackagingRawMaterials.objects.filter(
-            RawMaterialName=raw_name,
-            ContainerSize=container_size,
-            change_status='active'
-        )
-        
-        if matching_records.exists():
-            # Calculate total from all matching active records
-            total_bought = matching_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
-            
-            # Update all matching active records with the new total
-            matching_records.update(QuantityLeft=total_bought)
-
     return redirect("packaging_list")
 
 
 def used_packaging_create(request):
-    if request.method == 'POST':
-        form = UsedPackagingForm(request.POST)
-        if form.is_valid():
-            # --- 1. Save but let us tweak fields first -----------------------
-            used_pack = form.save(commit=False)
-            # Auto-fill the name from the selected batch
-            used_pack.RawMaterialName = (
-                used_pack.PackagingRawMaterialBatchCode.RawMaterialName
-            )
-            used_pack.save()                      # now the row is persisted
-
-            # --- 2. Recompute the running balance ---------------------------
-            # Every batch for this packaging material mirrors the *same* balance,
-            # so read QuantityLeft from any one of them (first()).
-            batches = PackagingRawMaterials.objects.filter(
-                RawMaterialName=used_pack.RawMaterialName
-            )
-            current_balance = batches.first().QuantityLeft if batches.exists() else 0
-            new_balance = max(current_balance - used_pack.QuantityUsed, 0)
-
-            # Update all sibling batches to reflect the new balance in one go
-            batches.update(QuantityLeft=new_balance)
-        else:
-            messages.error(
-                request,
-                "Used packaging creation error: "
-                + "; ".join(f"{field}: {', '.join(errs)}"
-                          for field, errs in form.errors.items())
-            )
+    if request.method == "POST":
+        try:
+            form = UsedPackagingForm(request.POST)
+            if form.is_valid():
+                # Create the used packaging record with active status
+                used_pack = form.save(commit=False)
+                used_pack.RawMaterialName = used_pack.PackagingRawMaterialBatchCode.RawMaterialName
+                used_pack.change_status = 'active'  # Set correct status
+                used_pack.save()
+                
+                # Update the quantity left in the packaging
+                packaging = used_pack.PackagingRawMaterialBatchCode
+                packaging.QuantityLeft = max(packaging.QuantityLeft - used_pack.QuantityUsed, 0)
+                packaging.save()
+                
+                return JsonResponse({"status": "success", "message": "Used packaging record created successfully"})
+            else:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Validation failed",
+                    "errors": {field: str(errors[0]) for field, errors in form.errors.items()}
+                }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": str(e)
+            }, status=500)
     return redirect('packaging_list')
 
 def used_packaging_update(request, pk):
@@ -596,10 +520,26 @@ def used_packaging_delete(request, pk):
     if request.method == 'POST':
         if request.POST.get('password') != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
-        packaging = used_pack.PackagingRawMaterialBatchCode
-        packaging.QuantityLeft += used_pack.QuantityUsed
-        packaging.save()
-        used_pack.delete()
+        
+        try:
+            # Add the quantity back to the packaging
+            packaging = used_pack.PackagingRawMaterialBatchCode
+            packaging.QuantityLeft += used_pack.QuantityUsed
+            packaging.save()
+            
+            # Mark as deleted instead of actually deleting
+            used_pack.change_status = 'deleted'
+            used_pack.save()
+            
+            return JsonResponse({
+                "status": "success",
+                "message": "Used packaging record deleted successfully"
+            })
+        except Exception as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error deleting used packaging record: {str(e)}"
+            }, status=500)
     return redirect('packaging_list')
 
 ##########################

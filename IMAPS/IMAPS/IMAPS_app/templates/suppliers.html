@@ -134,7 +134,7 @@
             </th>
           
             <!-- Search bar on the right -->
-            <th class="search-bar-container" colspan="5" style="text-align: right;">
+            <th class="search-bar-container" colspan="4" style="text-align: right;">
               <div class="search-bar" style="display: inline-flex; align-items: center;">
                 <!-- Search icon (acts as submit) -->
                 <i class="fa-solid fa-magnifying-glass search-icon"
@@ -166,7 +166,6 @@
             <th>Supplier Code</th>
             <th>Supplier Name</th>
             <th>Category</th>
-            <th>Status</th>
             <th>Point Person</th>
             <th>Contact Number</th>
             <th>Email Address</th>
@@ -180,7 +179,6 @@
             <td>{{ sup.SupplierCode }}</td>
             <td>{{ sup.SupplierName }}</td>
             <td>{{ sup.Category }}</td>
-            <td>{{ sup.change_status|capfirst }}</td> <!-- new -->
             <td>{{ sup.PointPerson }}</td>
              {# Contact Number #}
             <td class="multi-cell">

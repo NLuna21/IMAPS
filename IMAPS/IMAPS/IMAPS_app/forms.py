@@ -119,10 +119,15 @@ class UsedIngredientForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = UsedIngredient
-        exclude = ['UsedIngredientBatchCode', 'RawMaterialName']
+        exclude = ['UsedIngredientBatchCode', 'RawMaterialName', 'change_status']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter to show only active ingredients
+        self.fields['IngredientRawMaterialBatchCode'].queryset = IngredientsRawMaterials.objects.filter(change_status='active')
     
     def clean(self):
         cleaned_data = super().clean()
@@ -134,17 +139,24 @@ class UsedIngredientForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
         return cleaned_data
 
 class UsedPackagingForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
-    PackagingRawMaterialBatchCode = forms.ModelChoiceField(
-        queryset=PackagingRawMaterials.objects.all(),
-        to_field_name="PackagingBatchCode",
-        label="Packaging Batch Code"
+    UseCategory = forms.ChoiceField(
+        choices=UsedPackaging.USECATEGORY_CHOICES,
+        widget=forms.RadioSelect,
+        required=True,
+        label="Use Category"
     )
+    
     class Meta:
         model = UsedPackaging
-        exclude = ['USEDPackagingBatchCode','RawMaterialName','change_status']
+        exclude = ['USEDPackagingBatchCode', 'RawMaterialName', 'change_status']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter to show only active packaging materials
+        self.fields['PackagingRawMaterialBatchCode'].queryset = PackagingRawMaterials.objects.filter(change_status='active')
     
     def clean(self):
         cleaned_data = super().clean()
@@ -188,6 +200,11 @@ class PackagingRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.ModelFo
         widget=forms.RadioSelect,
         required=True,
         label="Use Type"
+    )
+    
+    Status = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': 'readonly'})
     )
     
     class Meta:
