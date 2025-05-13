@@ -5,6 +5,11 @@ from django.db import models
 
 # -------------------- Supplier --------------------
 class Supplier(models.Model):
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    
     SupplierCode = models.CharField(
         max_length=50, 
         primary_key=True,
@@ -19,7 +24,8 @@ class Supplier(models.Model):
     Category = models.CharField(max_length=10, choices=CATEGORY_CHOICES)
     SocialMedia = models.CharField(max_length=255, blank=True, null=True)
     EmailAddress = models.CharField(max_length=320, blank=True, null=True)
-    ContactNumber = models.CharField(max_length=18, blank=True, null=True)
+    ContactNumber = models.CharField(max_length=20, blank=True, null=True)
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
     PointPerson = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
@@ -28,6 +34,11 @@ class Supplier(models.Model):
 
 # -------------------- IngredientsRawMaterials --------------------
 class IngredientsRawMaterials(models.Model):
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    
     id = models.AutoField(primary_key=True)
     RawMaterialBatchCode = models.CharField(max_length=50, unique=True, blank=True)
     SupplierCode = models.ForeignKey(
@@ -46,8 +57,9 @@ class IngredientsRawMaterials(models.Model):
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES, default="GGB")
     ExpirationDate = models.DateField()
-    Status = models.CharField(max_length=15, blank=True)
-    Cost = models.FloatField(default=0, blank=True, null=True)
+    Status = models.CharField(max_length=50, default="Good")
+    Cost = models.FloatField(default=0)
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def save(self, *args, **kwargs):
         # Determine if we need to regenerate batch code
@@ -85,6 +97,16 @@ class IngredientsRawMaterials(models.Model):
 
 # -------------------- PackagingRawMaterials --------------------
 class PackagingRawMaterials(models.Model):
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('Low Inventory', 'Low Inventory'),
+        ('OK', 'OK'),
+    ]
+    
     id = models.AutoField(primary_key=True)
     PackagingBatchCode = models.CharField(max_length=50, unique=True, blank=True)
     SupplierCode = models.ForeignKey(
@@ -93,18 +115,19 @@ class PackagingRawMaterials(models.Model):
         db_column='SupplierCode'
     )
     RawMaterialName = models.CharField(max_length=255)
+    ContainerSize = models.CharField(max_length=50, default="N/A")
+    DateDelivered = models.DateField()
     QuantityBought = models.IntegerField(default=0)
     QuantityLeft = models.IntegerField(default=0)
     USECATEGORY_CHOICES = [
-        ('WBC', 'White Labeled Clients'),
-        ('GGB', 'Glow Glass Beauty'),
+        ('WBC', 'WBC'),
+        ('GGB', 'GGB'),
         ('Both', 'Both'),
     ]
-    UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES)
-    Status = models.CharField(max_length=15, blank=True)
-    Cost = models.FloatField(default=0, blank=True, null=True)
-    ContainerSize = models.CharField(max_length=50, blank=True, null=True)
-    DateDelivered = models.DateField()
+    UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES, default="GGB")
+    Status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="OK")
+    Cost = models.FloatField(default=0)
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def save(self, *args, **kwargs):
         regenerate = False
@@ -125,6 +148,7 @@ class PackagingRawMaterials(models.Model):
             if self.QuantityLeft == 0:
                 self.QuantityLeft = self.QuantityBought
 
+        # Auto-compute Status
         if self.QuantityLeft < 10:
             self.Status = "Low Inventory"
         else:
@@ -138,21 +162,27 @@ class PackagingRawMaterials(models.Model):
 
 # -------------------- UsedIngredient --------------------
 class UsedIngredient(models.Model):
-    UsedIngredientBatchCode = models.CharField(max_length=50, primary_key=True, blank=True)
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    
+    UsedIngredientBatchCode = models.CharField(max_length=50, primary_key=True)
     IngredientRawMaterialBatchCode = models.ForeignKey(
         IngredientsRawMaterials,
         on_delete=models.CASCADE,
-        db_column='RawMaterialBatchCode'
+        db_column='IngredientRawMaterialBatchCode'
     )
     RawMaterialName = models.CharField(max_length=255)
-    QuantityUsed = models.IntegerField()
+    QuantityUsed = models.FloatField()
+    DateUsed = models.DateField()
     USECATEGORY_CHOICES = [
         ('WBC', 'WBC'),
         ('GGB', 'GGB'),
         ('Both', 'Both'),
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES)
-    DateUsed = models.DateField()
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def save(self, *args, **kwargs):
         if not self.UsedIngredientBatchCode:
@@ -169,21 +199,27 @@ class UsedIngredient(models.Model):
 
 # -------------------- UsedPackaging --------------------
 class UsedPackaging(models.Model):
+    CHANGE_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('deleted', 'Deleted'),
+    ]
+    
     USEDPackagingBatchCode = models.CharField(max_length=50, primary_key=True, blank=True)
     PackagingRawMaterialBatchCode = models.ForeignKey(
         PackagingRawMaterials,
         on_delete=models.CASCADE,
-        db_column='PackagingBatchCode'
+        db_column='PackagingRawMaterialBatchCode'
     )
     RawMaterialName = models.CharField(max_length=255)
     QuantityUsed = models.IntegerField()
+    DateUsed = models.DateField()
     USECATEGORY_CHOICES = [
         ('WBC', 'WBC'),
         ('GGB', 'GGB'),
         ('Both', 'Both'),
     ]
     UseCategory = models.CharField(max_length=10, choices=USECATEGORY_CHOICES)
-    DateUsed = models.DateField()
+    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
 
     def save(self, *args, **kwargs):
         if not self.USEDPackagingBatchCode:
