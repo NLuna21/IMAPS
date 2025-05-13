@@ -1,6 +1,16 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-{% block content %}
+  <title>Suppliers Inventory</title>
+  <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
 <style>
   /* Form styling */
   .form-group {
@@ -74,23 +84,8 @@
     border: 1px solid #f5c6cb;
     border-radius: 4px;
   }
-
-  /* Rest of your existing styles */
 </style>
 
-<!DOCTYPE html>
-<html lang="en">
-{% load static %}
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>Suppliers Inventory</title>
-  <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="logo">
@@ -123,7 +118,6 @@
       </li>
     </ul>
   </div>
-
 
   <!-- Main Content -->
   <div class="main-content">
@@ -463,8 +457,5 @@
   });
 </script>
 
-
 </body>
 </html>
-
-{% endblock %}
