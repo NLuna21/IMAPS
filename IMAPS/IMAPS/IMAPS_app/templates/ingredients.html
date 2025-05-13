@@ -8,6 +8,257 @@
   <link rel="stylesheet" href="{% static 'IMAPS_app/css/styles.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Right-align numeric columns */
+    table tbody td {
+      text-align: left;
+    }
+    table tbody td:nth-child(3),  /* Quantity Bought */
+    table tbody td:nth-child(4),  /* Quantity Left */
+    table tbody td:nth-child(5),  /* Total Qty. Available */
+    table tbody td:nth-child(10) { /* Cost */
+      text-align: right;
+    }
+
+    /* Modal Styles */
+    #subtractIngredientModal .modal-content {
+      max-width: 400px;
+      padding: 20px;
+    }
+
+    #subtractIngredientModal .modal-header {
+      margin: -20px -20px 20px -20px;
+      padding: 15px 20px;
+      border-bottom: 1px solid #ddd;
+      background: #f8f9fa;
+    }
+
+    #subtractIngredientModal .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    #subtractIngredientModal form {
+      padding: 0 15px;
+    }
+
+    #subtractIngredientModal form > div {
+      margin-bottom: 15px;
+    }
+
+    #subtractIngredientModal label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: normal;
+    }
+
+    #subtractIngredientModal input[type="password"],
+    #subtractIngredientModal input[type="number"],
+    #subtractIngredientModal input[type="date"],
+    #subtractIngredientModal select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    #subtractIngredientModal input[type="radio"] {
+      margin-right: 8px;
+    }
+
+    #subtractIngredientModal input[type="radio"] + label {
+      display: inline;
+      margin-bottom: 0;
+    }
+
+    #subtractIngredientModal .button-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin: 20px -15px 0;
+      padding: 15px 15px 0;
+      border-top: 1px solid #eee;
+    }
+
+    #subtractIngredientModal .button-container button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-width: 80px;
+    }
+
+    #subtractIngredientModal .button-outline {
+      background: white;
+      border: 1px solid #ddd;
+    }
+
+    #subtractIngredientModal .update-button {
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+
+    /* History Modal Styles */
+    #usedIngredientsHistoryModal .modal-content,
+    #usedPackagingHistoryModal .modal-content {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #usedIngredientsHistoryModal .modal-header,
+    #usedPackagingHistoryModal .modal-header {
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      padding: 15px 20px;
+      border-radius: 8px 8px 0 0;
+    }
+
+    #usedIngredientsHistoryModal .modal-header h2,
+    #usedPackagingHistoryModal .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #333;
+    }
+
+    #usedIngredientsHistoryModal .table-container,
+    #usedPackagingHistoryModal .table-container {
+      padding: 20px;
+    }
+
+    #usedIngredientsHistoryModal table,
+    #usedPackagingHistoryModal table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+
+    #usedIngredientsHistoryModal th,
+    #usedPackagingHistoryModal th {
+      background: #f8f9fa;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #333;
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    #usedIngredientsHistoryModal td,
+    #usedPackagingHistoryModal td {
+      padding: 12px;
+      border-bottom: 1px solid #dee2e6;
+      color: #333;
+    }
+
+    #usedIngredientsHistoryModal tr:hover,
+    #usedPackagingHistoryModal tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    #usedIngredientsHistoryModal .delete-button,
+    #usedPackagingHistoryModal .delete-button {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    #usedIngredientsHistoryModal .delete-button:hover,
+    #usedPackagingHistoryModal .delete-button:hover {
+      background: #c82333;
+    }
+
+    /* Status Pills */
+    .status-pill.red.expiring {
+      font-weight: bold;
+      color: #dc3545;
+    }
+
+    /* Update Modal Styles */
+    #updateIngredientModal .modal-content {
+      max-width: 500px;
+      padding: 25px;
+    }
+
+    #updateIngredientModal .modal-header {
+      margin: -25px -25px 25px -25px;
+      padding: 20px 25px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    #updateIngredientModal .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #333;
+    }
+
+    #updateIngredientModal form {
+      padding: 0 15px;
+    }
+
+    /* General Modal Styles */
+    .modal-content .form-group {
+      margin-bottom: 25px;
+    }
+
+    .modal-content label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: normal;
+    }
+
+    .modal-content input[type="text"],
+    .modal-content input[type="password"],
+    .modal-content input[type="number"],
+    .modal-content input[type="date"],
+    .modal-content select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    .modal-content .button-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .modal-content .button-container button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      min-width: 100px;
+    }
+
+    .modal-content .button-outline {
+      background: white;
+      border: 1px solid #ddd;
+      color: #333;
+    }
+
+    .modal-content .update-button {
+      background: #007bff;
+      color: white;
+      border: none;
+    }
+
+    .modal-content .update-button:hover {
+      background: #0056b3;
+    }
+  </style>
 </head>
 <body>
   <!-- SIDEBAR -->
@@ -75,19 +326,19 @@
         <colgroup>
           <col style="width: 11%;"> <!-- Ingredient Name -->
           <col style="width: 8%;"> <!-- Batch Code -->
-          <col style="width: 8%;"> <!-- Quantity Bought -->
-          <col style="width: 8%;"> <!-- Quantity Left -->
-          <col style="width: 8%;"> <!-- Total Quantity Available -->
+          <col style="width: 8%;"> <!-- Qty. Bought -->
+          <col style="width: 8%;"> <!-- Qty. Left -->
+          <col style="width: 8%;"> <!-- Total Qty. Available -->
           <col style="width: 11%;"> <!-- Supplier -->
           <col style="width: 12%;"> <!-- Date Delivered -->
           <col style="width: 8%;">  <!-- Use Category -->
           <col style="width: 12%;">  <!-- Expiration Date -->
           <col style="width: 8%;">  <!-- Cost -->
-          <col style="width: 8.5%;">  <!-- Status -->
+          <col style="width: 8%;">  <!-- Status -->
           <col style="width: 10%;"> <!-- Options -->
         </colgroup>
         <thead>
-          <tr class="table-header">
+          <tr>
             <th class="pagination" colspan="6" style="text-align: left;">
               Page <span id="ingCurrentPage">1</span>/<span id="ingTotalPages">1</span>
               <button class="pageButton" onclick="changeIngredientsPage(-1)" id="ingPrev">&lt;</button>
@@ -108,7 +359,7 @@
           <tr>
             <th>Ingredient Name</th>
             <th>Batch Code</th>
-            <th class="qtybought">Qty. Bought</th>
+            <th>Qty. Bought</th>
             <th>Qty. Left</th>
             <th>Total Qty. Available</th>
             <th>Supplier</th>
@@ -122,12 +373,12 @@
         </thead>
         <tbody id="ingredientsTableBody">
           {% for ing in ingredients %}
-          <tr data-raw-material-code="{{ ing.RawMaterialBatchCode }}" data-raw-material-pk="{{ ing.id }}">
+          <tr data-raw-material-code="{{ ing.RawMaterialBatchCode }}" data-raw-material-pk="{{ ing.id }}" data-supplier-code="{{ ing.SupplierCode }}">
             <td>{{ ing.RawMaterialName }}</td>
             <td>{{ ing.RawMaterialBatchCode }}</td>
-            <td>{{ ing.QuantityBought }}</td>
-            <td>{{ ing.QuantityLeft }}</td>
-            <td>{{ ing.TotalQuantityAvailable }}</td>
+            <td>{{ ing.QuantityBought }}g</td>
+            <td>{{ ing.QuantityLeft }}g</td>
+            <td>{{ ing.TotalQuantityAvailable }}g</td>
             <td>{{ ing.SupplierCode }}</td>
             <td>{{ ing.DateDelivered|date:"d/m/Y" }}</td>
             <td>{{ ing.UseCategory }}</td>
@@ -135,7 +386,7 @@
             <td>₱{{ing.Cost}}</td>
             <td>
               {% if ing.Status == "Expiring" %}
-                <span class="status-pill red">Expiring</span>
+                <span class="status-pill red expiring">Expiring</span>
               {% elif ing.Status == "Low Inventory" %}
                 <span class="status-pill red">Low Inventory</span>
               {% else %}
@@ -143,7 +394,7 @@
               {% endif %}
             </td>
             <td class="optionscolumn">
-              <button class="update-button" onclick="openUpdateModalIngredient('{{ ing.RawMaterialBatchCode }}','{{ ing.SupplierCode }}','{{ ing.RawMaterialName }}','{{ ing.DateDelivered }}','{{ ing.QuantityBought }}','{{ ing.QuantityLeft }}','{{ ing.UseCategory }}','{{ ing.ExpirationDate }}','{{ ing.Status }}','{{ ing.Cost }}')">Update</button>
+              <button class="update-button" onclick="openUpdateModalIngredient('{{ ing.RawMaterialBatchCode }}','{{ ing.SupplierCode.SupplierCode }}','{{ ing.RawMaterialName }}','{{ ing.DateDelivered }}','{{ ing.QuantityBought }}','{{ ing.QuantityLeft }}','{{ ing.UseCategory }}','{{ ing.ExpirationDate }}','{{ ing.Status }}','{{ ing.Cost }}')">Update</button>
               <button class="delete-button" onclick="openDeleteModalIngredient('{{ ing.id }}','{{ ing.RawMaterialBatchCode }}','{{ ing.RawMaterialName }}')">Delete</button>
             </td>
           </tr>
@@ -214,11 +465,16 @@
       <form method="POST" action="{% url 'ingredients_create' %}" id="createIngredientForm" class="form-vertical">
         {% csrf_token %}
         {% for field in create_form %}
-          <div class="form-group">
-            <label for="{{ field.id_for_label }}">
-              {{ field.label }}
+          {% if field.name != 'Status' and field.name != 'RawMaterialBatchCode' %}
+          <div class="form-group" style="margin-bottom: 25px;">
+            <label for="{{ field.id_for_label }}" style="margin-bottom: 10px;">
+              {% if field.name == 'RawMaterialName' %}
+                Ingredient Name
+              {% else %}
+                {{ field.label }}
+              {% endif %}
               {% if field.field.required %}
-                <span style="color:red;">*</span>
+                <span style="color: red;">*</span>
               {% endif %}
               :
             </label>
@@ -246,6 +502,7 @@
               <div class="text-danger">{{ err }}</div>
             {% endfor %}
           </div>
+          {% endif %}
         {% endfor %}
         <div class="button-container">
           <button type="button" class="button-outline" onclick="closeModal('addIngredientModal')">Discard</button>
@@ -270,10 +527,29 @@
           </label>
           <input type="password" id="subtractPassword" name="password" required>
         </div>
-        <div class="form-group">
+        <div>
+          <label for="id_IngredientRawMaterialBatchCode">
+            Ingredient Batch Code<span style="color:red;">*</span>:
+          </label>
+          <select id="id_IngredientRawMaterialBatchCode" name="IngredientRawMaterialBatchCode" required>
+            <option value="">Select Ingredient Batch Code</option>
+            {% for ing in ingredients %}
+            <option value="{{ ing.id }}" data-date-delivered="{{ ing.DateDelivered|date:'Y-m-d' }}">
+              {{ ing.RawMaterialBatchCode }} - {{ ing.RawMaterialName }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="id_QuantityUsed">
+            Quantity Used (g,grams)<span style="color:red;">*</span>:
+          </label>
+          <input type="number" id="id_QuantityUsed" name="QuantityUsed" min="1" required>
+        </div>
+        <div>
           <label>Use Category<span style="color:red;">*</span>:</label>
-          <div class="radio-group">
-            <div class="radio-option">
+          <div style="margin-top: 10px;">
+            <div>
               <input type="radio" name="UseCategory" value="WBC" id="id_UseCategory_WBC_sub" required>
               <label for="id_UseCategory_WBC_sub">White Labeled Client</label>
             </div>
@@ -297,7 +573,7 @@
         <input type="hidden" name="change_status" value="Used">
         <div class="button-container" style="margin-top: 20px;">
           <button type="button" class="button-outline" onclick="closeModal('subtractIngredientModal')">Discard</button>
-          <button type="submit" class="update-button">Confirm</button>
+          <button type="submit" class="update-button">Save</button>
         </div>
       </form>
     </div>
@@ -314,73 +590,86 @@
         {% csrf_token %}
         <div class="form-group">
           <label for="updatePassword">
-            Password<span style="color:red;">*</span>:
+            Password<span style="color: red;">*</span>:
           </label>
           <input type="password" id="updatePassword" name="password" required>
         </div>
         <input type="hidden" name="RawMaterialBatchCode" id="modalRawMaterialBatchCodeHidden" value="">
         <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden" value="">
-        <!-- Hidden used value: computed as (Quantity Bought - Quantity Left) -->
         <input type="hidden" id="modalUsed" name="used" value="">
         
-        <label for="modalRawMaterialName">
-          Ingredient Name<span style="color:red;">*</span>:
-        </label>
-        <input type="text" name="RawMaterialName" id="modalRawMaterialName" required>
+        <div class="form-group">
+          <label for="modalRawMaterialName">
+            Ingredient Name<span style="color: red;">*</span>:
+          </label>
+          <input type="text" name="RawMaterialName" id="modalRawMaterialName" required>
+        </div>
   
-        <label for="modalDateDelivered">
-          Date Delivered<span style="color:red;">*</span>:
-        </label>
-        <input type="date" name="DateDelivered" id="modalDateDelivered" required>
+        <div class="form-group">
+          <label for="modalDateDelivered">
+            Date Delivered<span style="color: red;">*</span>:
+          </label>
+          <input type="date" name="DateDelivered" id="modalDateDelivered" required>
+        </div>
   
-        <label for="modalQuantityBought">
-          Quantity Bought<span style="color:red;">*</span>:
-        </label>
-        <input type="number" step="any" name="QuantityBought" id="modalQuantityBought" required>
+        <div class="form-group">
+          <label for="modalQuantityBought">
+            Quantity Bought (g)<span style="color: red;">*</span>:
+          </label>
+          <input type="number" step="any" name="QuantityBought" id="modalQuantityBought" required>
+        </div>
   
-        <label for="modalQuantityLeft">
-          Quantity Left<span style="color:red;">*</span>:
-        </label>
-        <input type="number" step="any" name="QuantityLeft" id="modalQuantityLeft" required>
+        <div class="form-group">
+          <label for="modalQuantityLeft">
+            Quantity Left (g)<span style="color: red;">*</span>:
+          </label>
+          <input type="number" step="any" name="QuantityLeft" id="modalQuantityLeft" required>
+        </div>
         
-        <label for="modalSupplierCode">Supplier:</label>
-        <select id="modalSupplierCode" name="SupplierCode">
-          <option value="">Select a Supplier</option>
-          <!-- Options populated dynamically -->
-        </select>
+        <div class="form-group">
+          <label for="modalSupplierCode">
+            Supplier<span style="color: red;">*</span>:
+          </label>
+          <select id="modalSupplierCode" name="SupplierCode" required>
+            <option value="">Select a Supplier</option>
+          </select>
+        </div>
         
-        <label>Use Category<span style="color:red;">*</span>:</label>
-        <div class="radio-group">
-          <div class="radio-option">
-            <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC">
-            <label for="useCategoryWBC">White Labeled Client</label>
-          </div>
-          <div class="radio-option">
-            <input type="radio" name="UseCategory" value="GGB" id="useCategoryGGB">
-            <label for="useCategoryGGB">Glow Glass Beauty</label>
-          </div>
-          <div class="radio-option">
-            <input type="radio" name="UseCategory" value="Both" id="useCategoryBoth">
-            <label for="useCategoryBoth">Both</label>
+        <div class="form-group">
+          <label>Use Category<span style="color: red;">*</span>:</label>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="WBC" id="useCategoryWBC" required>
+              <label for="useCategoryWBC">White Labeled Client</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="GGB" id="useCategoryGGB">
+              <label for="useCategoryGGB">Glow Glass Beauty</label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" name="UseCategory" value="Both" id="useCategoryBoth">
+              <label for="useCategoryBoth">Both</label>
+            </div>
           </div>
         </div>
         
-        <label for="modalExpirationDate">
-          Expiration Date<span style="color:red;">*</span>:
-        </label>
-        <input type="date" name="ExpirationDate" id="modalExpirationDate" required>
+        <div class="form-group">
+          <label for="modalExpirationDate">
+            Expiration Date<span style="color: red;">*</span>:
+          </label>
+          <input type="date" name="ExpirationDate" id="modalExpirationDate" required>
+        </div>
         
-        <label>Status:</label>
-        <input type="text" name="Status" id="modalStatus" readonly>
-        
-        <label for="modalCost">
-          Cost<span style="color:red;">*</span>:
-        </label>
-        <input type="number" step="any" name="Cost" id="modalCost" required>
+        <div class="form-group">
+          <label for="modalCost">
+            Cost<span style="color: red;">*</span>:
+          </label>
+          <input type="number" step="any" name="Cost" id="modalCost" required>
+        </div>
         
         <div class="button-container">
           <button type="button" class="button-outline" onclick="closeModal('updateIngredientModal')">Discard</button>
-          <button type="submit" class="update-button">Save Changes</button>
+          <button type="submit" class="update-button">Save</button>
         </div>
       </form>
     </div>
@@ -416,7 +705,7 @@
         <span class="close" onclick="closeModal('deleteUsedIngredientModal')">&times;</span>
       </div>
       <p id="deleteUsedIngredientMessage">Are you sure you want to delete this used ingredient entry?</p>
-      <form method="POST" id="deleteUsedIngredientForm">
+      <form method="POST" id="deleteUsedIngredientForm" onsubmit="return handleDeleteUsedIngredient(event);">
         {% csrf_token %}
         <div class="form-group">
           <label for="deleteUsedPassword">Password:</label>
@@ -493,12 +782,16 @@
       }
       
       document.getElementById("modalExpirationDate").value = formattedExpirationDate;
-      document.getElementById("modalStatus").value = status;
       document.getElementById("modalCost").value = cost;
       
       // Populate the supplier dropdown for ingredients
       fetch('/api/suppliers/ingredients')
-          .then(response => response.json())
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Network response was not ok');
+              }
+              return response.json();
+          })
           .then(data => {
               let supplierSelect = document.getElementById("modalSupplierCode");
               supplierSelect.innerHTML = '<option value="">Select a Supplier</option>';
@@ -512,7 +805,10 @@
                   supplierSelect.appendChild(option);
               });
           })
-          .catch(error => console.error('Error fetching suppliers:', error));
+          .catch(error => {
+              console.error('Error fetching suppliers:', error);
+              alert('Error loading suppliers. Please try again.');
+          });
   
       openModal("updateIngredientModal");
     }
@@ -540,50 +836,6 @@
       document.getElementById('deleteUsedIngredientForm').action = `/used-ingredients/delete/${usedBatchCode}/`;
       openModal('deleteUsedIngredientModal');
     }
-
-    // Add form submit handler for used ingredients delete
-    document.getElementById('deleteUsedIngredientForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const form = e.target;
-      const formData = new FormData(form);
-      
-      try {
-        const response = await fetch(form.action, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-          }
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-          // Success case
-          closeModal('deleteUsedIngredientModal');
-          window.location.reload(); // Refresh to show updated quantities
-        } else {
-          // Error case
-          const errorContainer = document.getElementById('mainErrorContainer');
-          const errorTitle = document.getElementById('errorTitle');
-          const errorContent = document.getElementById('errorContent');
-          
-          errorContainer.style.display = 'block';
-          errorContainer.style.backgroundColor = '#f8d7da';
-          errorContainer.style.color = '#721c24';
-          errorContainer.style.border = '1px solid #f5c6cb';
-          
-          errorTitle.textContent = 'Error Deleting Used Ingredient';
-          errorContent.textContent = data.message || 'An error occurred while deleting the used ingredient record.';
-          
-          errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('An error occurred while deleting the record. Please try again.');
-      }
-    });
     
     // Update Packaging Modal functions
     function openUpdateModalPackaging(packagingBatchCode, rawMaterialName, containerSize, dateDelivered, qtyBought, qtyLeft, useCategory, cost, supplierCode) {
@@ -842,168 +1094,89 @@
     closeModal('subtractIngredientModal');
     return false;
   }
-</script>
 
-<style>
-#subtractIngredientModal .modal-content {
-  max-width: 400px;
-  padding: 20px;
-}
-
-#subtractIngredientModal .modal-header {
-  margin: -20px -20px 20px -20px;
-  padding: 15px 20px;
-  border-bottom: 1px solid #ddd;
-  background: #f8f9fa;
-}
-
-#subtractIngredientModal .modal-header h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-#subtractIngredientModal form {
-  padding: 0 15px;
-}
-
-#subtractIngredientModal form > div {
-  margin-bottom: 15px;
-}
-
-#subtractIngredientModal label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: normal;
-}
-
-#subtractIngredientModal input[type="password"],
-#subtractIngredientModal input[type="number"],
-#subtractIngredientModal input[type="date"],
-#subtractIngredientModal select {
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-#subtractIngredientModal input[type="radio"] {
-  margin-right: 8px;
-}
-
-#subtractIngredientModal input[type="radio"] + label {
-  display: inline;
-  margin-bottom: 0;
-}
-
-#subtractIngredientModal .button-container {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin: 20px -15px 0;
-  padding: 15px 15px 0;
-  border-top: 1px solid #eee;
-}
-
-#subtractIngredientModal .button-container button {
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  min-width: 80px;
-}
-
-#subtractIngredientModal .button-outline {
-  background: white;
-  border: 1px solid #ddd;
-}
-
-#subtractIngredientModal .update-button {
-  background: #007bff;
-  color: white;
-  border: none;
-}
-
-/* History Modal Styles */
-#usedIngredientsHistoryModal .modal-content,
-#usedPackagingHistoryModal .modal-content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-#usedIngredientsHistoryModal .modal-header,
-#usedPackagingHistoryModal .modal-header {
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-  padding: 15px 20px;
-  border-radius: 8px 8px 0 0;
-}
-
-#usedIngredientsHistoryModal .modal-header h2,
-#usedPackagingHistoryModal .modal-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #333;
-}
-
-#usedIngredientsHistoryModal .table-container,
-#usedPackagingHistoryModal .table-container {
-  padding: 20px;
-}
-
-#usedIngredientsHistoryModal table,
-#usedPackagingHistoryModal table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 0;
-}
-
-#usedIngredientsHistoryModal th,
-#usedPackagingHistoryModal th {
-  background: #f8f9fa;
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #333;
-  border-bottom: 2px solid #dee2e6;
-}
-
-#usedIngredientsHistoryModal td,
-#usedPackagingHistoryModal td {
-  padding: 12px;
-  border-bottom: 1px solid #dee2e6;
-  color: #333;
-}
-
-#usedIngredientsHistoryModal tr:hover,
-#usedPackagingHistoryModal tr:hover {
-  background-color: #f8f9fa;
-}
-
-#usedIngredientsHistoryModal .delete-button,
-#usedPackagingHistoryModal .delete-button {
-  background: #dc3545;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-#usedIngredientsHistoryModal .delete-button:hover,
-#usedPackagingHistoryModal .delete-button:hover {
-  background: #c82333;
-}
-
-/* Responsive table */
-@media screen and (max-width: 768px) {
-  #usedIngredientsHistoryModal .table-container,
-  #usedPackagingHistoryModal .table-container {
-    overflow-x: auto;
+  async function handleDeleteUsedIngredient(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const errorContainer = document.getElementById('mainErrorContainer');
+    const errorTitle = document.getElementById('errorTitle');
+    const errorContent = document.getElementById('errorContent');
+    
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Success case - reload the page to show updated quantities
+        window.location.reload();
+        return false;
+      } else {
+        // Error case
+        errorContainer.style.display = 'block';
+        errorContainer.style.backgroundColor = '#f8d7da';
+        errorContainer.style.color = '#721c24';
+        errorContainer.style.border = '1px solid #f5c6cb';
+        
+        errorTitle.textContent = 'Error Deleting Used Ingredient Entry';
+        errorContent.textContent = data.message || 'An error occurred while deleting the used ingredient record.';
+        
+        // Close the modal
+        closeModal('deleteUsedIngredientModal');
+        
+        // Scroll to error message
+        errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      errorContainer.style.display = 'block';
+      errorContainer.style.backgroundColor = '#f8d7da';
+      errorContainer.style.color = '#721c24';
+      errorContainer.style.border = '1px solid #f5c6cb';
+      errorTitle.textContent = 'System Error';
+      errorContent.textContent = 'An error occurred while processing your request. Please try again.';
+      
+      // Close the modal
+      closeModal('deleteUsedIngredientModal');
+      
+      // Scroll to error message
+      errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    return false;
   }
-}
-</style>
+
+  // Add this function to calculate low inventory status
+  function calculateLowInventoryStatus(quantityLeft, quantityBought) {
+    const threshold = 0.15; // 15%
+    return (quantityLeft / quantityBought) <= threshold ? "Low Inventory" : "OK";
+  }
+
+  // Modify the existing table row to include the calculation
+  document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('#ingredientsTableBody tr:not(#noIngredientsRow)');
+    rows.forEach(row => {
+      const qtyBought = parseFloat(row.children[2].textContent);
+      const qtyLeft = parseFloat(row.children[3].textContent);
+      if (!isNaN(qtyBought) && !isNaN(qtyLeft)) {
+        const status = calculateLowInventoryStatus(qtyLeft, qtyBought);
+        if (status === "Low Inventory") {
+          const statusCell = row.children[10];
+          if (!statusCell.querySelector('.status-pill.red')) {
+            statusCell.innerHTML = '<span class="status-pill red">Low Inventory</span>';
+          }
+        }
+      }
+    });
+  });
+</script>
 </body>
 </html>

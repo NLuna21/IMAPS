@@ -29,7 +29,6 @@
   .form-group input[type="password"],
 
 
-
   /* Radio button styling */
   .radio-group {
     display: flex;
@@ -135,7 +134,7 @@
             </th>
           
             <!-- Search bar on the right -->
-            <th class="search-bar-container" colspan="4" style="text-align: right;">
+            <th class="search-bar-container" colspan="5" style="text-align: right;">
               <div class="search-bar" style="display: inline-flex; align-items: center;">
                 <!-- Search icon (acts as submit) -->
                 <i class="fa-solid fa-magnifying-glass search-icon"
@@ -167,6 +166,7 @@
             <th>Supplier Code</th>
             <th>Supplier Name</th>
             <th>Category</th>
+            <th>Status</th>
             <th>Point Person</th>
             <th>Contact Number</th>
             <th>Email Address</th>
@@ -180,6 +180,7 @@
             <td>{{ sup.SupplierCode }}</td>
             <td>{{ sup.SupplierName }}</td>
             <td>{{ sup.Category }}</td>
+            <td>{{ sup.change_status|capfirst }}</td> <!-- new -->
             <td>{{ sup.PointPerson }}</td>
              {# Contact Number #}
             <td class="multi-cell">
@@ -245,11 +246,11 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8">No Suppliers Found.</td>
+            <td colspan="9">No Suppliers Found.</td>
           </tr>
           {% endfor %}
           <tr id="noResultsRow" style="display: none;">
-            <td colspan="8" style="text-align: center; color: gray;">No matching suppliers found.</td>
+            <td colspan="9" style="text-align: center; color: gray;">No matching suppliers found.</td>
           </tr>
         </tbody>
       </table>
@@ -410,7 +411,6 @@
           <div class="field-row">
             <input type="email" name="EmailAddress[]" id="email_address_update_0" placeholder="name@example.com" />
           </div>
-          </div>
           <button type="button" class="add-btn" data-field-name="EmailAddress">+ Add more</button>
       </div>
 
@@ -494,9 +494,9 @@ function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socia
   document.getElementById('categoryBoth').checked       = (category === 'Both');
 
   // 5. Prefill the rest of the fields
-  document.getElementById('social_media_update_0').value    = socialMedia;
-  document.getElementById('email_address_update_0').value   = emailAddress;
-  document.getElementById('contact_number_update_0').value  = contactNumber;
+  document.getElementById('SocialMedia').value    = socialMedia;
+  document.getElementById('EmailAddress').value   = emailAddress;
+  document.getElementById('ContactNumber').value  = contactNumber;
   document.getElementById('PointPerson').value    = pointPerson;
   // 6. Finally, open the modal
   openModal('updateSupplierModal');
@@ -622,52 +622,35 @@ function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socia
   document.getElementById('point_person_update').value    = pointPerson;  // <— add this line!
 
 
-  // Helper for splitting multi-values
-  const splitValues = raw => raw ? raw.split(/[;,]/).map(s=>s.trim()).filter(Boolean) : [];
+  // Helper: split on comma or semicolon, trim, drop empties
+  const splitList = str => str
+    ? str.split(/[;,]/).map(s=>s.trim()).filter(Boolean)
+    : [];
 
-  // We'll scope all multi-field operations to the update modal
-  const modal = document.getElementById('updateSupplierModal');
+  // For each multi-field type, clear old rows and re-create
+  const types = ['SocialMedia','EmailAddress','ContactNumber'];
+  types.forEach(type => {
+    const raw = { SocialMedia: socialMedia,
+                  EmailAddress: emailAddress,
+                  ContactNumber: contactNumber,
+                }[type] || '';
+    const list = splitList(raw);
 
-  // Social Media
-  const smList = splitValues(socialMedia);
-  const smWrapper = modal.querySelector('.multi-field[data-field-name="SocialMedia"] .fields-wrap');
-  smWrapper.querySelectorAll('.field-row').forEach((row,i) => i>0 && row.remove());
-  modal.querySelector('#social_media_update_0').value = smList[0] || '';
-  smList.slice(1).forEach((val,idx) => {
-    const clone = smWrapper.querySelector('.field-row').cloneNode(true);
-    const input = clone.querySelector('input');
-    input.id = `social_media_update_${idx+1}`;
-    input.value = val;
-    smWrapper.appendChild(clone);
+    const wrapper = document.querySelector(`.multi-field[data-field-name="${type}"] .fields-wrap`);
+    // remove all but the first row:
+    wrapper.querySelectorAll('.field-row')
+      .forEach((row, i) => { if (i>0) row.remove(); });
+
+    // fill 
+    wrapper.querySelector('input').value = list[0]||'';
+    // clone extras
+    list.slice(1).forEach(val => {
+      const clone = wrapper.querySelector('.field-row').cloneNode(true);
+      clone.querySelector('input').value = val;
+      wrapper.appendChild(clone);
+    });
   });
 
-  // Email Address
-  const emList = splitValues(emailAddress);
-  const emWrapper = modal.querySelector('.multi-field[data-field-name="EmailAddress"] .fields-wrap');
-  emWrapper.querySelectorAll('.field-row').forEach((row,i) => i>0 && row.remove());
-  modal.querySelector('#email_address_update_0').value = emList[0] || '';
-  emList.slice(1).forEach((val,idx) => {
-    const clone = emWrapper.querySelector('.field-row').cloneNode(true);
-    const input = clone.querySelector('input');
-    input.id = `email_address_update_${idx+1}`;
-    input.value = val;
-    emWrapper.appendChild(clone);
-  });
-
-  // Contact Number
-  const cnList = splitValues(contactNumber);
-  const cnWrapper = modal.querySelector('.multi-field[data-field-name="ContactNumber"] .fields-wrap');
-  cnWrapper.querySelectorAll('.field-row').forEach((row,i) => i>0 && row.remove());
-  modal.querySelector('#contact_number_update_0').value = cnList[0] || '';
-  cnList.slice(1).forEach((val,idx) => {
-    const clone = cnWrapper.querySelector('.field-row').cloneNode(true);
-    const input = clone.querySelector('input');
-    input.id = `contact_number_update_${idx+1}`;
-    input.value = val;
-    cnWrapper.appendChild(clone);
-  });
-
-  // Finally open modal
   openModal('updateSupplierModal');
 }
 // Pin‐open on click

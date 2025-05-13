@@ -141,36 +141,45 @@ button:hover {
 }
 
 .optionscolumn {
-    padding-left: 8px; /* optional spacing */
-  }
+    padding-left: 8px;
+    width: 120px; /* Set fixed width for options column */
+    min-width: 120px; /* Ensure minimum width */
+}
   
-  .options-buttons {
+.options-buttons {
     display: flex;
-    justify-content: flex-start; /* left-align */
-    gap: 6px; /* space between buttons */
-  }
-  
+    flex-direction: column; /* Stack buttons vertically */
+    gap: 6px;
+    align-items: stretch; /* Make buttons fill the width */
+}
 
 /* Table Styles */
 .table-container {
     margin-top: 20px;
-    overflow: visible !important;
+    overflow-x: auto;
+    overflow-y: visible;
+    max-width: 100%;
+    border-radius: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 table {
     width: 100%;
+    min-width: 1200px;
     border-collapse: separate;
     border-spacing: 0;
     margin-top: 20px;
     background: #fff;
     border-radius: 20px;
     overflow: visible;
-    table-layout: fixed;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    table-layout: fixed; /* Add fixed table layout */
 }
 
 thead {
-    background: #e8edf8; /* Solid header background */
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #e8edf8;
     color: #000;
     font-weight: lighter;
 }
@@ -197,22 +206,118 @@ td {
     text-align: left;
     font-size: 14px;
     font-weight: normal;
-    max-width: 16ch;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle; /* Center content vertically */
 }
 
 th {
     font-weight: bold;
     font-size: 16px;
+    background: #e8edf8;
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
-td a {
-    color: #007bff;
-    text-decoration: none;
+/* Column widths */
+table colgroup {
+    display: table-column-group;
 }
-td a:hover {
-    text-decoration: underline;
+
+table col {
+    width: auto;
+}
+
+/* Right-align numeric columns */
+table tbody td {
+    text-align: left;
+}
+
+table tbody td:nth-child(3),  /* Quantity Bought */
+table tbody td:nth-child(4),  /* Quantity Left */
+table tbody td:nth-child(5),  /* Total Qty. Available */
+table tbody td:nth-child(10) { /* Cost */
+    text-align: right;
+}
+
+/* Prevent any wrapping in table cells */
+table tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Add responsive styles */
+@media screen and (max-width: 1400px) {
+    .table-container {
+        margin: 15px 10px;
+    }
+    
+    th, td {
+        padding: 15px;
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .table-container {
+        margin: 10px 5px;
+    }
+    
+    th, td {
+        padding: 12px;
+        font-size: 13px;
+    }
+    
+    th {
+        font-size: 14px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .table-container {
+        margin: 10px 0;
+        border-radius: 10px;
+    }
+    
+    th, td {
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    /* Keep buttons readable at smaller sizes but still stacked */
+    .optionscolumn .update-button,
+    .optionscolumn .delete-button {
+        padding: 6px 12px;
+        width: 100%;
+        min-width: 80px;
+    }
+}
+
+/* Ensure table header stays fixed */
+.table-container {
+    position: relative;
+}
+
+thead tr {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #e8edf8;
+}
+
+/* Ensure buttons stay readable at smaller sizes */
+.table-container .update-button,
+.table-container .delete-button {
+    padding: 6px 12px;
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+/* Add smooth scrolling for better UX */
+.table-container {
+    scroll-behavior: smooth;
 }
 
 /* Pagination */
@@ -236,6 +341,7 @@ td a:hover {
     font-size: 16px;
     transition: background 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
 }
+
 .pageButton:hover {
     background: #d4d4d4;
     color: #000;
@@ -281,10 +387,56 @@ td a:hover {
     align-items: center;
     padding: 5px;
 }
+
 .menu-button svg {
     width: 20px;
     height: 20px;
     fill: #555;
+}
+
+/* Radio Group */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-left: 0px;
+    margin-top: 5px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.radio-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.radio-option label {
+    cursor: pointer;
+    padding-left: 6px;
+    font-size: 14px;
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
+/* Form Group */
+.form-group:has(.radio-group) {
+    margin-bottom: 10px;
+}
+
+/* Alert Messages */
+.alert {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
 }
 
 /* Modal Styles */
@@ -383,7 +535,7 @@ td a:hover {
     font-weight: bold;
     box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
     position: relative;
-    left: -30px;                     /* undo the sidebar’s left padding */
+    left: -30px;                     /* undo the sidebar's left padding */
     width: calc(100% + 20px);        /* grow it back out so it still fills */
     border-top-left-radius: 10px;    /* keep your rounded corner */
     border-bottom-left-radius: 10px;
@@ -451,7 +603,7 @@ td a:hover {
     padding: 0 !important;
   }
   
-  /* ensure each <li> doesn’t add extra indent or bullets */
+  /* ensure each <li> doesn't add extra indent or bullets */
   #createSupplierForm .form-group ul li {
     margin: 0 !important;
     padding: 0 !important;
@@ -516,7 +668,7 @@ td a:hover {
     padding: 0 !important;
   }
   
-  /* ensure each <li> doesn’t add extra indent or bullets */
+  /* ensure each <li> doesn't add extra indent or bullets */
   #createIngredientForm  .form-group ul li {
     margin: 0 !important;
     padding: 0 !important;
@@ -580,7 +732,7 @@ td a:hover {
     padding: 0 !important;
   }
   
-  /* ensure each <li> doesn’t add extra indent or bullets */
+  /* ensure each <li> doesn't add extra indent or bullets */
   #createUsedIngredientForm  .form-group ul li {
     margin: 0 !important;
     padding: 0 !important;
@@ -644,7 +796,7 @@ td a:hover {
     padding: 0 !important;
   }
   
-  /* ensure each <li> doesn’t add extra indent or bullets */
+  /* ensure each <li> doesn't add extra indent or bullets */
   #createPackagingForm  .form-group ul li {
     margin: 0 !important;
     padding: 0 !important;
@@ -709,7 +861,7 @@ td a:hover {
     padding: 0 !important;
   }
   
-  /* ensure each <li> doesn’t add extra indent or bullets */
+  /* ensure each <li> doesn't add extra indent or bullets */
   #subtractPackagingForm   .form-group ul li {
     margin: 0 !important;
     padding: 0 !important;
@@ -740,7 +892,7 @@ td a:hover {
     margin: 0;
     padding: 0;
   }
-  /* also make sure any inner UL>LI aren’t doing their own flex */
+  /* also make sure any inner UL>LI aren't doing their own flex */
   #subtractPackagingForm #id_UseCategoryRadios ul li {
     display: contents;
   }
@@ -795,7 +947,7 @@ td a:hover {
     padding: 0 !important;
   }
   
-  /* ensure each <li> doesn’t add extra indent or bullets */
+  /* ensure each <li> doesn't add extra indent or bullets */
   #updatePackagingForm  .form-group ul li {
     margin: 0 !important;
     padding: 0 !important;
@@ -814,12 +966,12 @@ td a:hover {
     margin-top: 1rem;
   }
   
-  /* if you’d rather add padding inside the white “card” */
+  /* if you'd rather add padding inside the white "card" */
   .modal-content {
     padding-top: 3rem;   /* increases space above the form */
   }
   
-  /* you can also limit the form’s height and make it scrollable */
+  /* you can also limit the form's height and make it scrollable */
   #updatePackagingForm {
     max-height: calc(100vh - 150px);  /* leave room for header/footer */
     overflow-y: auto;                 /* scroll if it gets too tall */
@@ -849,7 +1001,7 @@ td a:hover {
 .dropdown-list {
   display: none;
   position: absolute;
-  top: 70%;       /* just under the cell’s bottom edge */
+  top: 70%;       /* just under the cell's bottom edge */
   left: 0;
   background: #fff;
   border: 1px solid #ccc;
@@ -871,7 +1023,7 @@ td a:hover {
   display: block;
 }
 
-/* Show when the cell has the “open” class (toggled by JS) */
+/* Show when the cell has the "open" class (toggled by JS) */
 .multi-cell.open .dropdown-list {
   display: block;
 }
@@ -879,8 +1031,8 @@ td a:hover {
 /* Make every input in the update form span the full content width */
 #updateSupplierForm input,
 #updateSupplierForm select {
-  display: block;       /* ensure it’s a block-level box */
-  width: 100% !important;    /* stretch to the container’s full width */
+  display: block;       /* ensure it's a block-level box */
+  width: 100% !important;    /* stretch to the container's full width */
   box-sizing: border-box;    /* include padding/border in that width */
 }
 

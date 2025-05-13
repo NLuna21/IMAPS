@@ -291,11 +291,11 @@
     <div class="table-container">
       <table>
         <colgroup>
-          <col style="width: 15%;"> <!-- Packaging Name (includes Container Size) -->
+          <col style="width: 11%;"> <!-- Packaging Name -->
           <col style="width: 8%;"> <!-- Batch Code -->
           <col style="width: 8%;"> <!-- Quantity Bought -->
           <col style="width: 8%;"> <!-- Quantity Left -->
-          <col style="width: 8%;"> <!-- Total Quantity Available -->
+          <col style="width: 8%;"> <!-- Total Qty. Available -->
           <col style="width: 11%;"> <!-- Supplier -->
           <col style="width: 12%;"> <!-- Date Delivered -->
           <col style="width: 8%;">  <!-- Use Category -->
@@ -310,7 +310,7 @@
               <button class="pageButton" onclick="changePackagingPage(-1)" id="packPrev">&lt;</button>
               <button class="pageButton" onclick="changePackagingPage(1)" id="packNext">&gt;</button>
             </th>
-            <th class="search-bar-container" colspan="6" style="text-align: right;">
+            <th class="search-bar-container" colspan="5" style="text-align: right;">
               <div class="search-bar" style="display: inline-flex; align-items: center;">
                 <i class="fa-solid fa-magnifying-glass search-icon" id="packagingSearchIcon" style="cursor: pointer;"></i>
                 <input type="text" class="search-input" id="packagingSearchInput" placeholder="Search Packaging..." style="padding: 4px 8px; font-size: 14px;">
@@ -321,7 +321,6 @@
                 </button>
               </div>
             </th>
-            
           </tr>
           <tr>
             <th>Packaging Name</th>
@@ -364,8 +363,8 @@
             </td>
             <td>₱{{ material.Cost }}</td>
             <td>
-              <button class="update-button" onclick="openUpdateModalPackaging('{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}','{{ material.ContainerSize }}','{{ material.DateDelivered }}','{{ material.QuantityBought }}','{{ material.QuantityLeft }}','{{ material.UseCategory }}','{{ material.Cost }}','{{ material.SupplierCode.SupplierCode }}')">Update</button>
-              <button class="delete-button" onclick="openDeleteModalPackaging('{{ material.id }}','{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}')">Delete</button>
+              <button class="update-button" onclick="openUpdateModalPackaging('{{ material.PackagingBatchCode }}', '{{ material.RawMaterialName }}', '{{ material.ContainerSize }}', '{{ material.DateDelivered|date:"Y-m-d" }}', '{{ material.QuantityBought }}', '{{ material.QuantityLeft }}', '{{ material.UseCategory }}', '{{ material.Cost }}', '{{ material.SupplierCode.SupplierCode }}')">Update</button>
+              <button class="delete-button" onclick="openDeleteModalPackaging('{{ material.id }}', '{{ material.PackagingBatchCode }}', '{{ material.RawMaterialName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
@@ -724,7 +723,7 @@
         <span class="close" onclick="closeModal('deleteUsedPackagingModal')">&times;</span>
       </div>
       <p id="deleteUsedPackagingMessage">Are you sure you want to delete this used packaging entry?</p>
-      <form method="POST" id="deleteUsedPackagingForm" onsubmit="return confirm('Are you sure you want to delete this record?');">
+      <form method="POST" id="deleteUsedPackagingForm" onsubmit="return handleDeleteUsedPackaging(event);">
         {% csrf_token %}
         <div class="form-group">
           <label for="deleteUsedPackagingPassword">Password:</label>
@@ -863,11 +862,11 @@
       
       // Set the correct radio button based on useCategory
       if (useCategory === "WBC") {
-         document.getElementById("id_UseCategory_WBC").checked = true;
+          document.getElementById("id_UseCategory_WBC_update").checked = true;
       } else if (useCategory === "GGB") {
-         document.getElementById("id_UseCategory_GGB").checked = true;
+          document.getElementById("id_UseCategory_GGB_update").checked = true;
       } else if (useCategory === "Both") {
-         document.getElementById("id_UseCategory_Both").checked = true;
+          document.getElementById("id_UseCategory_Both_update").checked = true;
       }
       
       document.getElementById('Cost').value = cost;
@@ -1256,12 +1255,14 @@
     return true;
   }
 
-  // Add form submit handler for used packaging delete
-  document.getElementById('deleteUsedPackagingForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+  async function handleDeleteUsedPackaging(event) {
+    event.preventDefault();
     
-    const form = e.target;
+    const form = event.target;
     const formData = new FormData(form);
+    const errorContainer = document.getElementById('mainErrorContainer');
+    const errorTitle = document.getElementById('errorTitle');
+    const errorContent = document.getElementById('errorContent');
     
     try {
       const response = await fetch(form.action, {
@@ -1275,30 +1276,43 @@
       const data = await response.json();
       
       if (response.ok) {
-        // Success case
-        closeModal('deleteUsedPackagingModal');
-        window.location.reload(); // Refresh to show updated quantities
+        // Success case - reload the page to show updated quantities
+        window.location.reload();
+        return false;
       } else {
         // Error case
-        const errorContainer = document.getElementById('mainErrorContainer');
-        const errorTitle = document.getElementById('errorTitle');
-        const errorContent = document.getElementById('errorContent');
-        
         errorContainer.style.display = 'block';
         errorContainer.style.backgroundColor = '#f8d7da';
         errorContainer.style.color = '#721c24';
         errorContainer.style.border = '1px solid #f5c6cb';
         
-        errorTitle.textContent = 'Error Deleting Used Packaging';
+        errorTitle.textContent = 'Error Deleting Used Packaging Entry';
         errorContent.textContent = data.message || 'An error occurred while deleting the used packaging record.';
         
+        // Close the modal
+        closeModal('deleteUsedPackagingModal');
+        
+        // Scroll to error message
         errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('An error occurred while deleting the record. Please try again.');
+      errorContainer.style.display = 'block';
+      errorContainer.style.backgroundColor = '#f8d7da';
+      errorContainer.style.color = '#721c24';
+      errorContainer.style.border = '1px solid #f5c6cb';
+      errorTitle.textContent = 'System Error';
+      errorContent.textContent = 'An error occurred while processing your request. Please try again.';
+      
+      // Close the modal
+      closeModal('deleteUsedPackagingModal');
+      
+      // Scroll to error message
+      errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  });
+    
+    return false;
+  }
 </script>
 
 </body>
