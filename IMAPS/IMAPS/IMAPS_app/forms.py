@@ -86,12 +86,6 @@ class PackagingRawMaterialsForm(forms.ModelForm):
         required=True,
         label="Use Type"
     )
-    existing_batch = forms.ChoiceField(
-        choices=[],
-        required=False,
-        label="Existing Packaging Batch Code (to add quantity left)",
-        widget=forms.Select
-    )
     
     class Meta:
         model = PackagingRawMaterials
@@ -102,12 +96,18 @@ class PackagingRawMaterialsForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Human-readable field labels
+        self.fields['SupplierCode'].label = 'Supplier Code'
+        self.fields['RawMaterialName'].label = 'Raw Material Name'
+        self.fields['ContainerSize'].label = 'Container Size'
+        self.fields['DateDelivered'].label = 'Date Delivered'
+        self.fields['QuantityBought'].label = 'Quantity Bought'
+        self.fields['Cost'].label = 'Total Cost'
+        self.fields['change_status'].label = 'Change Status'
         # Filter suppliers by category (packaging)
         self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Packaging', 'Both'])
-        batches = PackagingRawMaterials.objects.values_list('PackagingBatchCode', flat=True)
-        choices = [('None', 'None')]
-        choices += [(batch, batch) for batch in batches]
-        self.fields['existing_batch'].choices = choices
+
 
 class UsedIngredientForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     UseCategory = forms.ChoiceField(

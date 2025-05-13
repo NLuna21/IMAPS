@@ -15,7 +15,8 @@
     }
     table tbody td:nth-child(3),
     table tbody td:nth-child(4),
-    table tbody td:nth-child(9) {
+    table tbody td:nth-child(5),
+    table tbody td:nth-child(10) {
       text-align: right;
     }
     /* Extra spacing for form groups in modals */
@@ -333,7 +334,7 @@
             <th>Date Delivered</th>
             <th>Use Category</th>
             <th>Status</th>
-            <th>Cost</th>
+            <th>Total Cost</th>
             <th>Options</th>
           </tr>
         </thead>
@@ -350,7 +351,7 @@
             <td>{{ material.QuantityBought }}</td>
             <td>{{ material.QuantityLeft }}</td>
             <td>{{ material.TotalQuantityAvailable }}</td>
-            <td>{{ material.SupplierCode.SupplierName }}</td>
+            <td>{{ material.SupplierCode }}</td>
             <td>{{ material.DateDelivered|date:"Y-m-d" }}</td>
             <td>{{ material.UseCategory }}</td>
             <td>
@@ -469,7 +470,7 @@
         <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden" value="">
         <div class="form-group">
           <label for="RawMaterialName">
-            Raw Material Name<span style="color:red;">*</span>:
+            Packaging Type  <span style="color:red;">*</span>:
           </label>
           <input type="text" id="RawMaterialName" name="RawMaterialName">
         </div>
@@ -529,7 +530,7 @@
         </div>
         <div class="form-group">
           <label for="Cost">
-            Cost<span style="color:red;">*</span>:
+            Total Cost<span style="color:red;">*</span>:
           </label>
           <input type="number" id="Cost" name="Cost" min="0" step="any" required>
         </div>
