@@ -67,10 +67,11 @@
     <div class="table-container">
       <table>
         <colgroup>
-          <col style="width: 12%;"> <!-- Ingredient Name -->
-          <col style="width: 9%;"> <!-- Batch Code -->
+          <col style="width: 11%;"> <!-- Ingredient Name -->
+          <col style="width: 8%;"> <!-- Batch Code -->
           <col style="width: 8%;"> <!-- Quantity Bought -->
           <col style="width: 8%;"> <!-- Quantity Left -->
+          <col style="width: 8%;"> <!-- Total Quantity Available -->
           <col style="width: 11%;"> <!-- Supplier -->
           <col style="width: 12%;"> <!-- Date Delivered -->
           <col style="width: 8%;">  <!-- Use Category -->
@@ -86,7 +87,7 @@
               <button class="pageButton" onclick="changeIngredientsPage(-1)" id="ingPrev">&lt;</button>
               <button class="pageButton" onclick="changeIngredientsPage(1)" id="ingNext">&gt;</button>
             </th>
-            <th class="search-bar-container" colspan="5" style="text-align: right;">
+            <th class="search-bar-container" colspan="6" style="text-align: right;">
               <div class="search-bar" style="display: inline-flex; align-items: center;">
                 <i class="fa-solid fa-magnifying-glass search-icon" id="ingredientsSearchIcon" style="cursor: pointer;"></i>
                 <input type="text" class="search-input" id="ingredientsSearchInput" placeholder="Search Ingredients..." style="padding: 4px 8px; font-size: 14px;">
@@ -97,13 +98,13 @@
                 </button>
               </div>
             </th>
-            
           </tr>
           <tr>
             <th>Ingredient Name</th>
             <th>Batch Code</th>
             <th class="qtybought">Qty. Bought</th>
             <th>Qty. Left</th>
+            <th>Total Qty. Available</th>
             <th>Supplier</th>
             <th>Date Delivered</th>
             <th>Use Category</th>
@@ -120,6 +121,7 @@
             <td>{{ ing.RawMaterialBatchCode }}</td>
             <td>{{ ing.QuantityBought }}</td>
             <td>{{ ing.QuantityLeft }}</td>
+            <td>{{ ing.TotalQuantityAvailable }}</td>
             <td>{{ ing.SupplierCode }}</td>
             <td>{{ ing.DateDelivered|date:"d/m/Y" }}</td>
             <td>{{ ing.UseCategory }}</td>
@@ -135,20 +137,18 @@
               {% endif %}
             </td>
             <td class="optionscolumn">
-              
               <button class="update-button" onclick="openUpdateModalIngredient('{{ ing.RawMaterialBatchCode }}','{{ ing.SupplierCode }}','{{ ing.RawMaterialName }}','{{ ing.DateDelivered }}','{{ ing.QuantityBought }}','{{ ing.QuantityLeft }}','{{ ing.UseCategory }}','{{ ing.ExpirationDate }}','{{ ing.Status }}','{{ ing.Cost }}')">Update</button>
               <button class="delete-button" onclick="openDeleteModalIngredient('{{ ing.id }}','{{ ing.RawMaterialBatchCode }}','{{ ing.RawMaterialName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="10">No Ingredients Found.</td>
+            <td colspan="12">No Ingredients Found.</td>
           </tr>
           {% endfor %}
           <tr id="noIngredientsRow" style="display: none;">
-            <td colspan="11" style="text-align: center; color: gray;">No matching ingredients found.</td>
+            <td colspan="12" style="text-align: center; color: gray;">No matching ingredients found.</td>
           </tr>
-          
         </tbody>
       </table>
     </div>

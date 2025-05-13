@@ -123,7 +123,20 @@
     <!-- Packaging Table -->
     <div class="table-container">
       <table>
-
+        <colgroup>
+          <col style="width: 11%;"> <!-- Raw Material Name -->
+          <col style="width: 8%;"> <!-- Container Size -->
+          <col style="width: 8%;"> <!-- Batch Code -->
+          <col style="width: 8%;"> <!-- Quantity Bought -->
+          <col style="width: 8%;"> <!-- Quantity Left -->
+          <col style="width: 8%;"> <!-- Total Quantity Available -->
+          <col style="width: 11%;"> <!-- Supplier -->
+          <col style="width: 12%;"> <!-- Date Delivered -->
+          <col style="width: 8%;">  <!-- Use Category -->
+          <col style="width: 8%;">  <!-- Status -->
+          <col style="width: 8%;">  <!-- Cost -->
+          <col style="width: 10%;"> <!-- Options -->
+        </colgroup>
         <thead>
           <tr class="table-header">
             <th class="pagination" colspan="4" style="text-align: left;">
@@ -145,10 +158,12 @@
             
           </tr>
           <tr>
-            <th>Packaging Type</th>
+            <th>Raw Material Name</th>
+            <th>Container Size</th>
             <th>Batch Code</th>
             <th>Quantity Bought</th>
             <th>Quantity Left</th>
+            <th>Total Qty. Available</th>
             <th>Supplier</th>
             <th>Date Delivered</th>
             <th>Use Category</th>
@@ -159,29 +174,18 @@
         </thead>
         <tbody id="packagingTableBody">
           {% for material in materials %}
-          <tr data-packaging-pk="{{ material.id }}" data-packaging-code="{{ material.PackagingBatchCode }}">
-            <td>
-              {{ material.RawMaterialName }}
-              {% if material.ContainerSize %}
-                ({{ material.ContainerSize }})
-              {% endif %}
-            </td>
+          <tr data-packaging-code="{{ material.PackagingBatchCode }}" data-packaging-pk="{{ material.id }}">
+            <td>{{ material.RawMaterialName }}</td>
+            <td>{{ material.ContainerSize }}</td>
             <td>{{ material.PackagingBatchCode }}</td>
             <td>{{ material.QuantityBought }}</td>
             <td>{{ material.QuantityLeft }}</td>
+            <td>{{ material.TotalQuantityAvailable }}</td>
             <td>{{ material.SupplierCode.SupplierName }}</td>
-            <td>{{ material.DateDelivered|date:"d/m/Y" }}</td>
+            <td>{{ material.DateDelivered|date:"Y-m-d" }}</td>
             <td>{{ material.UseCategory }}</td>
-            <td>
-              {% if material.Status == "Low Inventory" %}
-                <span class="status-pill red">Low Inventory</span>
-              {% elif material.Status == "OK" %}
-                <span class="status-pill green">OK</span>
-              {% else %}
-                <span class="status-pill">{{ material.Status }}</span>
-              {% endif %}
-            </td>
-            <td>₱{{ material.Cost }}</td>
+            <td>{{ material.Status }}</td>
+            <td>{{ material.Cost }}</td>
             <td>
               <button class="update-button" onclick="openUpdateModalPackaging('{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}','{{ material.ContainerSize }}','{{ material.DateDelivered }}','{{ material.QuantityBought }}','{{ material.QuantityLeft }}','{{ material.UseCategory }}','{{ material.Cost }}','{{ material.SupplierCode.SupplierCode }}')">Update</button>
               <button class="delete-button" onclick="openDeleteModalPackaging('{{ material.id }}','{{ material.PackagingBatchCode }}','{{ material.RawMaterialName }}')">Delete</button>

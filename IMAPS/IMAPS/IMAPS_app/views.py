@@ -96,7 +96,36 @@ def supplier_delete(request, pk):
 #  INGREDIENTS RAW MATERIALS  #
 ##########################
 def ingredients_list(request):
+    # Get all ingredients
     ingredients = IngredientsRawMaterials.objects.all()
+    
+    # Calculate total quantity available for each ingredient
+    for ing in ingredients:
+        # Get all records with same name
+        matching_records = IngredientsRawMaterials.objects.filter(
+            RawMaterialName=ing.RawMaterialName
+        )
+        
+        if ing.UseCategory in ['GGB', 'WBC']:
+            # For GGB/WBC: Get same category total + Both total
+            same_category_total = matching_records.filter(
+                UseCategory=ing.UseCategory
+            ).aggregate(total=Sum('QuantityLeft'))['total'] or 0
+            
+            both_total = matching_records.filter(
+                UseCategory='Both'
+            ).aggregate(total=Sum('QuantityLeft'))['total'] or 0
+            
+            ing.TotalQuantityAvailable = same_category_total + both_total
+            
+        elif ing.UseCategory == 'Both':
+            # For Both: Only show Both total
+            both_total = matching_records.filter(
+                UseCategory='Both'
+            ).aggregate(total=Sum('QuantityLeft'))['total'] or 0
+            
+            ing.TotalQuantityAvailable = both_total
+    
     used_ings = UsedIngredient.objects.all()
     create_form = IngredientsRawMaterialsForm()
     used_ing_create_form = UsedIngredientForm()
@@ -113,53 +142,56 @@ def ingredients_create(request):
     if request.method == 'POST':
         form = IngredientsRawMaterialsForm(request.POST)
         if form.is_valid():
-            existing_batch = form.cleaned_data.get('existing_batch')
-            quantity_bought = form.cleaned_data.get('QuantityBought')
-            use_category = form.cleaned_data.get('UseCategory')
+            # Save the new record first
+            new_record = form.save()
+            use_category = new_record.UseCategory
             
-            if existing_batch and existing_batch != 'None':
-                try:
-                    # Get the existing record (assumed to be unique by batch code)
-                    existing_record = IngredientsRawMaterials.objects.get(RawMaterialBatchCode=existing_batch)
-                    
-                    # Create a new record but don't save yet
-                    new_record = form.save(commit=False)
-                    new_record.QuantityLeft = new_record.QuantityBought
-                    
-                    if use_category in ['WBC', 'GGB']:
-                        # When adding to WBC or GGB:
-                        # 1. Update their own category
-                        same_category = IngredientsRawMaterials.objects.filter(
-                            RawMaterialName=new_record.RawMaterialName,
-                            UseCategory=use_category
-                        )
-                        category_total = same_category.aggregate(total=Sum('QuantityLeft'))['total'] or 0
-                        same_category.update(QuantityLeft=category_total + new_record.QuantityBought)
-                        
-                        # 2. Also update Both category to include this quantity
-                        both_records = IngredientsRawMaterials.objects.filter(
-                            RawMaterialName=new_record.RawMaterialName,
-                            UseCategory='Both'
-                        )
-                        if both_records.exists():
-                            both_total = both_records.aggregate(total=Sum('QuantityLeft'))['total'] or 0
-                            both_records.update(QuantityLeft=both_total + new_record.QuantityBought)
-                    
-                    elif use_category == 'Both':
-                        # When adding to 'Both', only update Both category
-                        both_records = IngredientsRawMaterials.objects.filter(
-                            RawMaterialName=new_record.RawMaterialName,
-                            UseCategory='Both'
-                        )
-                        both_total = both_records.aggregate(total=Sum('QuantityLeft'))['total'] or 0
-                        both_records.update(QuantityLeft=both_total + new_record.QuantityBought)
-                    
-                    new_record.save()
-                    
-                except IngredientsRawMaterials.DoesNotExist:
-                    form.save()
-            else:
-                form.save()
+            # Find matching records with same name
+            matching_records = IngredientsRawMaterials.objects.filter(
+                RawMaterialName=new_record.RawMaterialName
+            )
+            
+            if use_category in ['GGB', 'WBC']:
+                # For GGB/WBC: Update only records of the same category
+                same_category_records = matching_records.filter(UseCategory=use_category)
+                
+                # Calculate total from same category records (excluding the new one)
+                same_category_total = same_category_records.exclude(
+                    id=new_record.id
+                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
+                
+                # Add the new record's quantity
+                total_quantity = same_category_total + new_record.QuantityBought
+                
+                # Get total from 'Both' records if they exist
+                both_total = matching_records.filter(
+                    UseCategory='Both'
+                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
+                
+                # Update all records of the same category with combined total
+                final_total = total_quantity + both_total
+                same_category_records.update(QuantityLeft=final_total)
+                
+            elif use_category == 'Both':
+                # For Both: Update only Both records with total of all Both records
+                both_records = matching_records.filter(UseCategory='Both')
+                both_total = both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                both_records.update(QuantityLeft=both_total)
+                
+                # Also update GGB records if they exist
+                ggb_records = matching_records.filter(UseCategory='GGB')
+                if ggb_records.exists():
+                    ggb_total = ggb_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                    # Add the new Both quantity to GGB total
+                    ggb_records.update(QuantityLeft=ggb_total + both_total)
+                
+                # Also update WBC records if they exist
+                wbc_records = matching_records.filter(UseCategory='WBC')
+                if wbc_records.exists():
+                    wbc_total = wbc_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                    # Add the new Both quantity to WBC total
+                    wbc_records.update(QuantityLeft=wbc_total + both_total)
+                
         else:
             messages.error(request, "Ingredient creation error: " +
                            "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
@@ -200,18 +232,53 @@ def ingredients_delete(request, pk):
         if request.POST.get("password") != PASSWORD:
             return HttpResponse("Incorrect password", status=403)
 
-        raw_name = ingredient.RawMaterialName        # ① remember the family
-        ingredient.delete()                          # ② remove the row
+        # Get the details before deleting
+        raw_name = ingredient.RawMaterialName
+        use_category = ingredient.UseCategory
+        
+        # Delete the record
+        ingredient.delete()
 
-        # ③–④ recalc QuantityLeft across the survivors
-        batches = IngredientsRawMaterials.objects.filter(RawMaterialName=raw_name)
-        if batches.exists():
-            total_bought = batches.aggregate(t=Sum("QuantityBought"))["t"] or 0
-            total_used   = UsedIngredient.objects.filter(
-                               RawMaterialName=raw_name
-                           ).aggregate(t=Sum("QuantityUsed"))["t"] or 0
-            new_left = max(total_bought - total_used, 0)
-            batches.update(QuantityLeft=new_left)
+        # Find matching records with same name
+        matching_records = IngredientsRawMaterials.objects.filter(
+            RawMaterialName=raw_name
+        )
+        
+        if matching_records.exists():
+            if use_category in ['GGB', 'WBC']:
+                # For GGB/WBC: Update only records of the same category
+                same_category_records = matching_records.filter(UseCategory=use_category)
+                
+                # Calculate total from same category records
+                same_category_total = same_category_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                
+                # Get total from 'Both' records if they exist
+                both_total = matching_records.filter(
+                    UseCategory='Both'
+                ).aggregate(total=Sum('QuantityBought'))['total'] or 0
+                
+                # Update all records of the same category with combined total
+                final_total = same_category_total + both_total
+                same_category_records.update(QuantityLeft=final_total)
+                
+            elif use_category == 'Both':
+                # For Both: Update all categories
+                # Update Both records
+                both_records = matching_records.filter(UseCategory='Both')
+                both_total = both_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                both_records.update(QuantityLeft=both_total)
+                
+                # Update GGB records if they exist
+                ggb_records = matching_records.filter(UseCategory='GGB')
+                if ggb_records.exists():
+                    ggb_total = ggb_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                    ggb_records.update(QuantityLeft=ggb_total + both_total)
+                
+                # Update WBC records if they exist
+                wbc_records = matching_records.filter(UseCategory='WBC')
+                if wbc_records.exists():
+                    wbc_total = wbc_records.aggregate(total=Sum('QuantityBought'))['total'] or 0
+                    wbc_records.update(QuantityLeft=wbc_total + both_total)
 
     return redirect("ingredients_list")
 
