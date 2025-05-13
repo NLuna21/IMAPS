@@ -18,7 +18,8 @@ class Supplier(models.Model):
     SupplierCode = models.CharField(
         max_length=50, 
         primary_key=True,
-        help_text="Unique identifier for the supplier (manually given)."
+        help_text="Unique identifier for the supplier (manually given).",
+        unique=True
     )
     SupplierName = models.CharField(max_length=255)
     CATEGORY_CHOICES = [
@@ -152,12 +153,18 @@ class PackagingRawMaterials(models.Model):
             if self.QuantityLeft == 0:
                 self.QuantityLeft = self.QuantityBought
 
-        # Auto-compute Status
-        if self.QuantityLeft < 10:
+        # ✅ FIX: Ensure QuantityBought > 0 before checking threshold
+        try:
+            if self.QuantityBought > 0:
+                percentage_left = (self.QuantityLeft / self.QuantityBought) * 100
+                if percentage_left < 15:
+                    self.Status = "Low Inventory"
+                else:
+                    self.Status = "OK"
+            else:
+                self.Status = "Low Inventory"
+        except ZeroDivisionError:
             self.Status = "Low Inventory"
-        else:
-            self.Status = "OK"
-
         super().save(*args, **kwargs)
 
     def __str__(self):
