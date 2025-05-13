@@ -27,8 +27,24 @@ PASSWORD = "test123"
 #####################
 #      SUPPLIERS    #
 #####################
+import re
+from django.shortcuts import render
+from .models import Supplier
+from .forms import SupplierForm
+
 def suppliers_list(request):
-    suppliers = Supplier.objects.all()
+    # Fetch only active and newly modified suppliers
+    suppliers = Supplier.objects.filter(change_status__in=["active", "new_modified"])
+
+    # Prepare a splitter to handle both commas and semicolons
+    splitter = re.compile(r"[;,]")
+    for sup in suppliers:
+        # Convert each delimited string into a clean list
+        sup.sm_list      = [s.strip() for s in splitter.split(sup.SocialMedia or '')    if s.strip()]
+        sup.email_list   = [s.strip() for s in splitter.split(sup.EmailAddress or '')    if s.strip()]
+        sup.contact_list = [s.strip() for s in splitter.split(sup.ContactNumber or '')  if s.strip()]
+        sup.pp_list      = [s.strip() for s in splitter.split(sup.PointPerson or '')    if s.strip()]
+
     create_form = SupplierForm()
     return render(request, 'suppliers.html', {
         'suppliers': suppliers,
@@ -40,6 +56,17 @@ def supplier_create(request):
         form = SupplierForm(request.POST)
         if form.is_valid():
             supplier = form.save(commit=False)
+
+            splitter = re.compile(r'[;,]')
+
+            # Re-join each of your array-style inputs back into a single string
+            for field in ('SocialMedia', 'EmailAddress', 'ContactNumber'):
+                raw_list = request.POST.getlist(f'{field}[]')
+                clean    = [s.strip() for s in raw_list if s.strip()]
+                setattr(supplier, field, '; '.join(clean))
+
+            # PointPerson is a single field on your form, so just pull from cleaned_data
+            supplier.PointPerson = form.cleaned_data.get('PointPerson', '').strip()
             
             # Get the use category from the form
             use_category = request.POST.get('UseCategory')
@@ -78,10 +105,27 @@ def supplier_update(request, pk):
             elif use_category == 'Both':
                 supplier.Category = 'Both'
             
+                        # 3) Re-join your multi-input fields
+            splitter = re.compile(r'[;,]')
+            for field in ('SocialMedia','EmailAddress','ContactNumber'):
+                raw_list = request.POST.getlist(f'{field}[]')
+                clean    = [s.strip() for s in raw_list if s.strip()]
+                setattr(supplier, field, '; '.join(clean))
+
+            supplier.PointPerson = request.POST.get('PointPerson', '').strip()
+
+
+            # 4) Mark it modified and persist
+            supplier.change_status = 'active'
             supplier.save()
         else:
-            messages.error(request, "Supplier update error: " +
-                           "; ".join([f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()]))
+            msg = "Supplier update error: " + "; ".join(
+                f"{fld}: {', '.join(errs)}"
+                  for fld, errs in form.errors.items()
+            )
+            messages.error(request, msg)
+
+
     return redirect('suppliers_list')
 
 def supplier_delete(request, pk):

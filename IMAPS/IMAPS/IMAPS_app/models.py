@@ -9,7 +9,12 @@ class Supplier(models.Model):
         ('active', 'Active'),
         ('deleted', 'Deleted'),
     ]
-    
+    change_status = models.CharField(
+        max_length=50,                  # bumped to 50 to avoid future length issues
+        choices=CHANGE_STATUS_CHOICES,
+        default='active',
+    )
+
     SupplierCode = models.CharField(
         max_length=50, 
         primary_key=True,
@@ -25,7 +30,6 @@ class Supplier(models.Model):
     SocialMedia = models.CharField(max_length=255, blank=True, null=True)
     EmailAddress = models.CharField(max_length=320, blank=True, null=True)
     ContactNumber = models.CharField(max_length=20, blank=True, null=True)
-    change_status = models.CharField(max_length=10, choices=CHANGE_STATUS_CHOICES, default='active')
     PointPerson = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):

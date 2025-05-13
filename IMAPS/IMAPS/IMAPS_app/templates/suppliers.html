@@ -27,13 +27,7 @@
   .form-group input[type="email"],
   .form-group input[type="tel"],
   .form-group input[type="password"],
-  .form-group select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
+
 
   /* Radio button styling */
   .radio-group {
@@ -140,7 +134,7 @@
             </th>
           
             <!-- Search bar on the right -->
-            <th class="search-bar-container" colspan="4" style="text-align: right;">
+            <th class="search-bar-container" colspan="5" style="text-align: right;">
               <div class="search-bar" style="display: inline-flex; align-items: center;">
                 <!-- Search icon (acts as submit) -->
                 <i class="fa-solid fa-magnifying-glass search-icon"
@@ -172,10 +166,11 @@
             <th>Supplier Code</th>
             <th>Supplier Name</th>
             <th>Category</th>
+            <th>Status</th>
+            <th>Point Person</th>
             <th>Contact Number</th>
             <th>Email Address</th>
             <th>Social Media</th>
-            <th>Point Person</th>
             <th>Options</th>
           </tr>
         </thead>
@@ -185,10 +180,54 @@
             <td>{{ sup.SupplierCode }}</td>
             <td>{{ sup.SupplierName }}</td>
             <td>{{ sup.Category }}</td>
-            <td>{{ sup.ContactNumber }}</td>
-            <td>{{ sup.EmailAddress }}</td>
-            <td>{{ sup.SocialMedia }}</td>
+            <td>{{ sup.change_status|capfirst }}</td> <!-- new -->
             <td>{{ sup.PointPerson }}</td>
+             {# Contact Number #}
+            <td class="multi-cell">
+              {{ sup.contact_list.0 }}
+              {% if sup.contact_list|length > 1 %}
+                <div class="dropdown-wrapper">
+                  <span class="toggle-dropdown">▼</span>
+                  <ul class="dropdown-list">
+                    {% for num in sup.contact_list|slice:"1:" %}
+                      <li>{{ num }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+            
+            {# Email Address #}
+            <td class="multi-cell">
+              {{ sup.email_list.0 }}
+              {% if sup.email_list|length > 1 %}
+                <div class="dropdown-wrapper">
+                  <span class="toggle-dropdown">▼</span>
+                  <ul class="dropdown-list">
+                    {% for email in sup.email_list|slice:"1:" %}
+                      <li>{{ email }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+            
+            {# Social Media #}
+            <td class="multi-cell">
+              {{ sup.sm_list.0 }}
+              {% if sup.sm_list|length > 1 %}
+                <div class="dropdown-wrapper">
+                  <span class="toggle-dropdown">▼</span>
+                  <ul class="dropdown-list">
+                    {% for sm in sup.sm_list|slice:"1:" %}
+                      <li>{{ sm }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </td>
+            
+            
             <td>
               <button class="update-button" 
               onclick="openUpdateModalSupplier(
@@ -199,18 +238,19 @@
                   '{{ sup.SocialMedia }}',
                   '{{ sup.EmailAddress }}',
                   '{{ sup.ContactNumber }}',
-                  '{{ sup.PointPerson }}'
+                  '{{ sup.PointPerson }}',
+                  '{{ sup.change_status }}'
               )">Update</button>
               <button class="delete-button" onclick="openDeleteModalSupplier('{{ sup.SupplierCode }}','{{ sup.SupplierName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8">No Suppliers Found.</td>
+            <td colspan="9">No Suppliers Found.</td>
           </tr>
           {% endfor %}
           <tr id="noResultsRow" style="display: none;">
-            <td colspan="8" style="text-align: center; color: gray;">No matching suppliers found.</td>
+            <td colspan="9" style="text-align: center; color: gray;">No matching suppliers found.</td>
           </tr>
         </tbody>
       </table>
@@ -218,110 +258,190 @@
   </div>
 
   <!-- ADD SUPPLIER MODAL -->
-  <div id="addSupplierModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add Supplier</h2>
-        <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
-      </div>
-      <form method="POST" action="{% url 'supplier_create' %}" id="createSupplierForm" class="form-vertical">
-        {% csrf_token %}
-        {% for field in create_form %}
-          <div class="form-group">
-            <label for="{{ field.id_for_label }}">
-              {{ field.label }}
-              {% if field.field.required %}
-                <span class="required-asterisk">*</span>
-              {% endif %}
-              :
-            </label>
-            {% if field.name == 'Category' %}
-              <div class="radio-group">
-                {% for radio in field %}
-                  <div class="radio-option">
-                    {{ radio.tag }}
-                    <label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              {{ field }}
-            {% endif %}
-            {% for err in field.errors %}
-              <div class="text-danger">{{ err }}</div>
-            {% endfor %}
-          </div>
-        {% endfor %}
-        <div class="button-container">
-          <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Discard</button>
-          <button type="submit" class="update-button">Save</button>
-        </div>
-      </form>
+<div id="addSupplierModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add Supplier</h2>
+      <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
     </div>
+    <form method="POST" action="{% url 'supplier_create' %}" id="createSupplierForm" class="form-vertical">
+      {% csrf_token %}
+
+      <!-- Supplier Code -->
+      <div class="form-group">
+        <label for="supplier_code_create">
+          Supplier Code<span class="required-asterisk">*</span>:
+        </label>
+        <input type="text" name="SupplierCode" id="supplier_code_create" required>
+      </div>
+
+      <!-- Supplier Name -->
+      <div class="form-group">
+        <label for="supplier_name_create">
+          Supplier Name<span class="required-asterisk">*</span>:
+        </label>
+        <input type="text" name="SupplierName" id="supplier_name_create" required>
+      </div>
+
+      <!-- Category -->
+      <div class="form-group">
+        <label>Category<span class="required-asterisk">*</span>:</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="Category" id="categoryIngredientCreate" value="Ingredient" required>
+            <label for="categoryIngredientCreate">Ingredient</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="Category" id="categoryPackagingCreate" value="Packaging">
+            <label for="categoryPackagingCreate">Packaging</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="Category" id="categoryBothCreate" value="Both">
+            <label for="categoryBothCreate">Both</label>
+          </div>
+        </div>
+      </div>
+            <!-- Point Person -->
+      <div class="form-group">
+        <label for="point_person_create">Point Person:</label>
+        <input type="text" name="PointPerson" id="point_person_create">
+      </div>
+
+      <!-- (optional) default status -->
+      <input type="hidden" name="change_status" value="active">
+
+      <!-- Social Media -->
+      <div class="multi-field" data-field-name="SocialMedia">
+        <label>Social Media:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="url" name="SocialMedia[]" id="social_media_create_0" placeholder="https://…" />
+          </div>
+        </div>
+        <button type="button" class="add-btn" data-field-name="SocialMedia">+ Add more</button>
+      </div>
+
+      <!-- Email Address -->
+      <div class="multi-field" data-field-name="EmailAddress">
+        <label>Email Address:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="email" name="EmailAddress[]" id="email_address_create_0" placeholder="name@example.com" />
+          </div>
+        </div>
+        <button type="button" class="add-btn" data-field-name="EmailAddress">+ Add more</button>
+      </div>
+
+      <!-- Contact Number -->
+      <div class="multi-field" data-field-name="ContactNumber">
+        <label>Contact Number:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="tel" name="ContactNumber[]" id="contact_number_create_0" placeholder="+63…" pattern="^[0-9+\\-\\s]+$"/>
+          </div>
+        </div>
+        <button type="button" class="add-btn" data-field-name="ContactNumber">+ Add more</button>
+      </div>
+
+
+
+      <div class="button-container">
+        <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Discard</button>
+        <button type="submit" class="update-button">Save</button>
+      </div>
+    </form>
   </div>
+</div>
+
 
 
   <!-- SUPPLIER UPDATE MODAL -->
-  <div id="updateSupplierModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Update Supplier (Code: <span id="modalSupplierCode"></span>)</h2>
-        <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
-      </div>
-      <form method="POST" id="updateSupplierForm" class="form-vertical">
-        {% csrf_token %}
-        <div class="form-group">
-          <label for="updatePassword">
-            Password<span class="required-asterisk">*</span>:
-          </label>
-          <input type="password" id="updatePassword" name="password" required>
-        </div>
-        <div class="form-group">
-          <label for="SupplierName">
-            Supplier Name<span class="required-asterisk">*</span>:
-          </label>
-          <input type="text" id="SupplierName" name="SupplierName" required>
-        </div>
-        <div class="form-group">
-          <label>Category<span class="required-asterisk">*</span>:</label>
-          <div class="radio-group">
-            <div class="radio-option">
-              <input type="radio" name="Category" value="Ingredient" id="categoryIngredient">
-              <label for="categoryIngredient">Ingredient</label>
-            </div>
-            <div class="radio-option">
-              <input type="radio" name="Category" value="Packaging" id="categoryPackaging">
-              <label for="categoryPackaging">Packaging</label>
-            </div>
-            <div class="radio-option">
-              <input type="radio" name="Category" value="Both" id="categoryBoth">
-              <label for="categoryBoth">Both</label>
-            </div>
+<div id="updateSupplierModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Update Supplier</h2>
+      <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
+    </div>
+    <form method="POST" id="updateSupplierForm">
+      {% csrf_token %}
+
+      <!-- SupplierCode, Name, Category unchanged… -->
+
+      <label for="supplier_code_update">Supplier Code:</label>
+      <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
+
+      <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
+      <input type="text" name="SupplierName" id="supplier_name_update" required>
+
+      <label for="category_update">Category<span style="color:red;">*</span>:</label>
+      <select name="Category" id="category_update" required>
+        <option value="Ingredient">Ingredient</option>
+        <option value="Packaging">Packaging</option>
+        <option value="Both">Both</option>
+      </select>
+
+      <label for="change_status_update">Status<span class="required-asterisk">*</span>:</label>
+        <select name="change_status" id="change_status_update" required>
+          <option value="active">Active</option>
+          <option value="deleted">Deleted</option>
+        </select>
+
+      <label for="point_person_update">Point Person:</label>
+      <input type="text"
+             name="PointPerson"
+             id="point_person_update"
+             />
+      <!-- Now the 3 multi-fields: -->
+
+      <!-- Social Media -->
+      <div class="multi-field" data-field-name="SocialMedia">
+        <label>Social Media:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="url" name="SocialMedia[]" id="social_media_update_0" placeholder="https://…" />
           </div>
         </div>
-        <div class="form-group">
-          <label for="SocialMedia">Social Media:</label>
-          <input type="text" id="SocialMedia" name="SocialMedia">
-        </div>
-        <div class="form-group">
-          <label for="EmailAddress">Email Address:</label>
-          <input type="email" id="EmailAddress" name="EmailAddress">
-        </div>
-        <div class="form-group">
-          <label for="ContactNumber">Contact Number:</label>
-          <input type="tel" id="ContactNumber" name="ContactNumber">
-        </div>
-        <div class="form-group">
-          <label for="PointPerson">Point Person:</label>
-          <input type="text" id="PointPerson" name="PointPerson">
-        </div>
-        <div class="button-container">
-          <button type="submit" class="update-button">Update</button>
-          <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
-        </div>
-      </form>
+        <button type="button" class="add-btn" data-field-name="SocialMedia">+ Add more</button>
+      </div>
+      
+      <!-- Email Address -->
+      <div class="multi-field" data-field-name="EmailAddress">
+        <label>Email Address:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="email" name="EmailAddress[]" id="email_address_update_0" placeholder="name@example.com" />
+          </div>
+          <button type="button" class="add-btn" data-field-name="EmailAddress">+ Add more</button>
+      </div>
+
+      <!-- Contact Number -->
+      <div class="multi-field" data-field-name="ContactNumber">
+        <label>Contact Number:</label>
+        <div class="fields-wrap">
+          <div class="field-row">
+            <input type="tel" name="ContactNumber[]" id="contact_number_update_0" placeholder="+63…" pattern="^[0-9+\-\s]+$"/>
+          </div>
     </div>
+    <button type="button" class="add-btn" data-field-name="ContactNumber">+ Add more</button>
+      </div>
+
+
+      
+
+      <!-- Password and buttons unchanged… -->
+      <div class="form-group">
+        <label for="deleteUsedPassword">
+          Password<span style="color:red;">*</span>:
+        </label>
+        <input type="password" id="deleteUsedPassword" name="password" required>
+      </div>
+      <div class="button-container">
+        <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
+        <button type="submit" class="update-button">Save Changes</button>
+      </div>
+    </form>
   </div>
+</div>
 
 
   <!-- DELETE SUPPLIER MODAL -->
@@ -356,19 +476,32 @@
     function closeModal(id) {
       document.getElementById(id).style.display = "none";
     }
-    function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson) {
-      // Set the form action URL for updating supplier using its primary key.
-      document.getElementById('updateSupplierForm').action = `/suppliers/update/${pk}/`;
-      // Pre-fill each field with the current supplier data.
-      document.getElementById('supplier_code_update').value = supplierCode;
-      document.getElementById('supplier_name_update').value = supplierName;
-      document.getElementById('category_update').value = category;
-      document.getElementById('social_media_update').value = socialMedia;
-      document.getElementById('email_address_update').value = emailAddress;
-      document.getElementById('contact_number_update').value = contactNumber;
-      document.getElementById('point_person_update').value = pointPerson;
-      openModal('updateSupplierModal');
-    }
+function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson, changeStatus) {
+  // 1. Set the form action
+  const form = document.getElementById('updateSupplierForm');
+  form.action = `/suppliers/update/${pk}/`;
+
+  // 2. Update the modal title with the supplier code
+  document.getElementById('modalSupplierCode').textContent = supplierCode;
+
+  // 3. Clear or prefill inputs
+  document.getElementById('updatePassword').value = '';  // always clear password for security
+  document.getElementById('SupplierName').value = supplierName;
+
+  // 4. Check the appropriate category radio
+  document.getElementById('categoryIngredient').checked = (category === 'Ingredient');
+  document.getElementById('categoryPackaging').checked  = (category === 'Packaging');
+  document.getElementById('categoryBoth').checked       = (category === 'Both');
+
+  // 5. Prefill the rest of the fields
+  document.getElementById('SocialMedia').value    = socialMedia;
+  document.getElementById('EmailAddress').value   = emailAddress;
+  document.getElementById('ContactNumber').value  = contactNumber;
+  document.getElementById('PointPerson').value    = pointPerson;
+  // 6. Finally, open the modal
+  openModal('updateSupplierModal');
+}
+
     function openDeleteModalSupplier(pk, name) {
       document.getElementById('deleteSupplierMessage').textContent =
         `Are you sure you want to delete "${name}"?`;
@@ -455,6 +588,84 @@
   document.getElementById('supplierFilterMenu').addEventListener('click', () => {
     alert('Filter options coming soon...');
   });
+
+
+  // Run once on page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Delegate all “Add more” clicks
+  document.querySelectorAll('.add-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const field = btn.dataset.fieldName;       // e.g. "EmailAddress"
+      const container = btn.closest('.multi-field').querySelector('.fields-wrap');
+      // Clone the first row:
+      const prototype = container.querySelector('.field-row');
+      const clone = prototype.cloneNode(true);
+      const input = clone.querySelector('input');
+      input.value = '';                          // clear old value
+      // Re-id it so each is unique (optional):
+      const idx = container.querySelectorAll('.field-row').length;
+      input.id = `${input.name.replace('[]','')}_${idx}`;
+      container.appendChild(clone);
+    });
+  });
+});
+
+// Override to inject existing data & open the modal
+function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson,changeStatus) {
+  const form = document.getElementById('updateSupplierForm');
+  form.action = `/suppliers/update/${pk}/`;
+  
+  document.getElementById('supplier_code_update').value = supplierCode;
+  document.getElementById('supplier_name_update').value = supplierName;
+  document.getElementById('category_update').value = category;
+  document.getElementById('change_status_update').value = changeStatus;  // new
+  document.getElementById('point_person_update').value    = pointPerson;  // <— add this line!
+
+
+  // Helper: split on comma or semicolon, trim, drop empties
+  const splitList = str => str
+    ? str.split(/[;,]/).map(s=>s.trim()).filter(Boolean)
+    : [];
+
+  // For each multi-field type, clear old rows and re-create
+  const types = ['SocialMedia','EmailAddress','ContactNumber'];
+  types.forEach(type => {
+    const raw = { SocialMedia: socialMedia,
+                  EmailAddress: emailAddress,
+                  ContactNumber: contactNumber,
+                }[type] || '';
+    const list = splitList(raw);
+
+    const wrapper = document.querySelector(`.multi-field[data-field-name="${type}"] .fields-wrap`);
+    // remove all but the first row:
+    wrapper.querySelectorAll('.field-row')
+      .forEach((row, i) => { if (i>0) row.remove(); });
+
+    // fill 
+    wrapper.querySelector('input').value = list[0]||'';
+    // clone extras
+    list.slice(1).forEach(val => {
+      const clone = wrapper.querySelector('.field-row').cloneNode(true);
+      clone.querySelector('input').value = val;
+      wrapper.appendChild(clone);
+    });
+  });
+
+  openModal('updateSupplierModal');
+}
+// Pin‐open on click
+document.querySelectorAll('.toggle-dropdown').forEach(icon => {
+  icon.addEventListener('click', e => {
+    const wrapper = icon.closest('.dropdown-wrapper');
+    wrapper.classList.toggle('open');
+    e.stopPropagation();
+  });
+});
+// Close when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-wrapper.open')
+          .forEach(w => w.classList.remove('open'));
+});
 </script>
 
 </body>
