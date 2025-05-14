@@ -441,7 +441,7 @@ thead tr {
 
 /* Modal Styles */
 .modal {
-    display: none; /* Hidden by default */
+    display: none;
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -449,7 +449,7 @@ thead tr {
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+    background-color: rgba(0, 0, 0, 0.5);
     align-items: center;
     justify-content: center;
 }
@@ -457,24 +457,32 @@ thead tr {
 .modal-content {
     background: #fff;
     border-radius: 8px;
-    padding: 20px;
-    width: 400px;
-    max-width: 90%;
+    width: 90%;
+    max-width: 1000px;
     position: relative;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+    font-weight: 500;
 }
 
 .close {
-    cursor: pointer;
     font-size: 24px;
-    font-weight: bold;
+    font-weight: normal;
+    cursor: pointer;
+    color: #666;
 }
 
 .modal form {
@@ -964,20 +972,14 @@ thead tr {
   /* push the form content down 2rem from the top of its container */
 #updatePackagingForm {
     margin-top: 1rem;
-  }
-  
-  /* if you'd rather add padding inside the white "card" */
-  .modal-content {
+}
+
+/* if you'd rather add padding inside the white "card" */
+.modal-content {
     padding-top: 3rem;   /* increases space above the form */
-  }
-  
-  /* you can also limit the form's height and make it scrollable */
-  #updatePackagingForm {
-    max-height: calc(100vh - 150px);  /* leave room for header/footer */
-    overflow-y: auto;                 /* scroll if it gets too tall */
-  }
-  
-  .multi-cell { position: relative; }
+}
+
+.multi-cell { position: relative; }
 .toggle-dropdown { cursor: pointer; margin-left: 4px; }
 .dropdown-list {
   display: none;
@@ -1072,4 +1074,164 @@ thead tr {
 .dropdown-wrapper .dropdown-list li {
   padding: 0.5em 1em;
   white-space: nowrap;
+}
+
+/* History Modal Table Styles */
+#usedIngredientsHistoryModal,
+#usedPackagingHistoryModal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#usedIngredientsHistoryModal .modal-content,
+#usedPackagingHistoryModal .modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 95%;
+    max-width: 1000px;
+    margin: 20px auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    padding: 20px;
+}
+
+#usedIngredientsHistoryModal .modal-header,
+#usedPackagingHistoryModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 16px 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#usedIngredientsHistoryModal .modal-header h2,
+#usedPackagingHistoryModal .modal-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: normal;
+    color: #333;
+    padding-left: 4px;
+}
+
+#usedIngredientsHistoryModal .close,
+#usedPackagingHistoryModal .close {
+    font-size: 20px;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    margin-left: 20px;
+}
+
+/* Table Styles */
+#usedIngredientsHistoryModal .table-container,
+#usedPackagingHistoryModal .table-container {
+    padding: 0 20px;
+    width: calc(100% - 40px);
+    overflow-x: auto;
+    margin: 0;
+}
+
+#usedIngredientsHistoryModal table,
+#usedPackagingHistoryModal table {
+    width: 100%;
+    min-width: 800px;  /* Set minimum width to prevent squishing */
+    max-width: 100%;   /* Prevent overflow */
+    border-collapse: collapse;
+    margin: 0;
+    padding-right: 20px;
+}
+
+/* Column Headers */
+#usedIngredientsHistoryModal th,
+#usedPackagingHistoryModal th {
+    background: #f8f9fa;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 500;
+    color: #333;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Table Cells */
+#usedIngredientsHistoryModal td,
+#usedPackagingHistoryModal td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #333;
+}
+
+/* Column Widths */
+#usedIngredientsHistoryModal table th:nth-child(1),
+#usedPackagingHistoryModal table th:nth-child(1) { min-width: 130px; width: 130px; } /* Name */
+
+#usedIngredientsHistoryModal table th:nth-child(2),
+#usedPackagingHistoryModal table th:nth-child(2) { min-width: 150px; width: 150px; } /* Batch Code */
+
+#usedIngredientsHistoryModal table th:nth-child(3),
+#usedPackagingHistoryModal table th:nth-child(3) { min-width: 95px; width: 95px; } /* Quantity */
+
+#usedIngredientsHistoryModal table th:nth-child(4),
+#usedPackagingHistoryModal table th:nth-child(4) { min-width: 95px; width: 95px; } /* Category */
+
+#usedIngredientsHistoryModal table th:nth-child(5),
+#usedPackagingHistoryModal table th:nth-child(5) { min-width: 95px; width: 95px; } /* Date */
+
+#usedIngredientsHistoryModal table th:nth-child(6),
+#usedPackagingHistoryModal table th:nth-child(6) { min-width: 90px; width: 90px; } /* Options */
+
+/* Column Alignments */
+#usedIngredientsHistoryModal th:nth-child(3),
+#usedIngredientsHistoryModal th:nth-child(4),
+#usedIngredientsHistoryModal th:nth-child(5),
+#usedIngredientsHistoryModal th:nth-child(6),
+#usedPackagingHistoryModal th:nth-child(3),
+#usedPackagingHistoryModal th:nth-child(4),
+#usedPackagingHistoryModal th:nth-child(5),
+#usedPackagingHistoryModal th:nth-child(6),
+#usedIngredientsHistoryModal td:nth-child(3),
+#usedIngredientsHistoryModal td:nth-child(4),
+#usedIngredientsHistoryModal td:nth-child(5),
+#usedPackagingHistoryModal td:nth-child(3),
+#usedPackagingHistoryModal td:nth-child(4),
+#usedPackagingHistoryModal td:nth-child(5) {
+    text-align: center;
+}
+
+/* Delete Button */
+#usedIngredientsHistoryModal .delete-button,
+#usedPackagingHistoryModal .delete-button {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    width: 80px;
+    text-align: left;
+    transition: background-color 0.2s;
+    display: inline-block;
+    letter-spacing: 0.2px;
+}
+
+#usedIngredientsHistoryModal .delete-button:hover,
+#usedPackagingHistoryModal .delete-button:hover {
+    background: #c82333;
+}
+
+#usedIngredientsHistoryModal td:last-child,
+#usedPackagingHistoryModal td:last-child {
+    padding-right: 15px;
+    padding-left: 15px;
+    text-align: center;
 }

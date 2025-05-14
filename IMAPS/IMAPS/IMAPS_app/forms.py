@@ -36,6 +36,7 @@ class SupplierForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     class Meta:
         model = Supplier
         fields = '__all__'
+        exclude = ['change_status']
         widgets = {
             'change_status': forms.Select(attrs={'id': 'changeStatus'}),
         }
@@ -47,16 +48,10 @@ class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
         required=True,
         label="Use Type"
     )
-    existing_batch = forms.ChoiceField(
-        choices=[],
-        required=False,
-        label="Existing Raw Material Batch Code",
-        widget=forms.Select
-    )
     
     class Meta:
         model = IngredientsRawMaterials
-        exclude = ['QuantityLeft', 'RawMaterialBatchCode','Status']
+        exclude = ['QuantityLeft', 'RawMaterialBatchCode','Status','change_status']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
             'ExpirationDate': forms.DateInput(attrs={'type': 'date'}),
@@ -66,10 +61,7 @@ class IngredientsRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Filter suppliers by category (ingredients)
         self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Ingredient', 'Both'])
-        batches = IngredientsRawMaterials.objects.values_list('RawMaterialBatchCode', flat=True)
-        choices = [('None', 'None')]
-        choices += [(batch, batch) for batch in batches]
-        self.fields['existing_batch'].choices = choices
+
     
     def clean(self):
         cleaned_data = super().clean()
@@ -89,7 +81,7 @@ class PackagingRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = PackagingRawMaterials
-        exclude = ['QuantityLeft', 'PackagingBatchCode','Status']
+        exclude = ['QuantityLeft', 'PackagingBatchCode','Status','change_status']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
         }
@@ -104,8 +96,6 @@ class PackagingRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
         self.fields['DateDelivered'].label = 'Date Delivered'
         self.fields['QuantityBought'].label = 'Quantity Bought'
         self.fields['Cost'].label = 'Total Cost'
-        self.fields['change_status'].label = 'Change Status'
-        # Filter suppliers by category (packaging)
         self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Packaging', 'Both'])
 
 
@@ -148,7 +138,7 @@ class UsedPackagingForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
     
     class Meta:
         model = UsedPackaging
-        exclude = ['USEDPackagingBatchCode', 'RawMaterialName', 'change_status']
+        exclude = ['USEDPackagingBatchCode', 'RawMaterialName', 'change_status', 'Status']
         widgets = {
             'DateUsed': forms.DateInput(attrs={'type': 'date'}),
         }
@@ -179,7 +169,8 @@ class IngredientsRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.Model
     
     class Meta:
         model = IngredientsRawMaterials
-        fields = ['SupplierCode', 'RawMaterialName', 'DateDelivered', 'QuantityBought', 'QuantityLeft', 'UseCategory', 'ExpirationDate', 'Status', 'Cost']
+        fields = ['SupplierCode', 'RawMaterialName', 'DateDelivered', 'QuantityBought', 'QuantityLeft', 'UseCategory', 'ExpirationDate','Cost']
+        exclude = ['Status','change_status']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
             'ExpirationDate': forms.DateInput(attrs={'type': 'date'}),
@@ -209,7 +200,8 @@ class PackagingRawMaterialsUpdateForm(RequiredFieldsAsteriskMixin, forms.ModelFo
     
     class Meta:
         model = PackagingRawMaterials
-        fields = ['SupplierCode', 'RawMaterialName', 'ContainerSize', 'DateDelivered', 'QuantityBought', 'QuantityLeft', 'UseCategory', 'Status', 'Cost']
+        fields = ['SupplierCode', 'RawMaterialName', 'ContainerSize', 'DateDelivered', 'QuantityBought', 'QuantityLeft', 'UseCategory','Cost']
+        exclude =['Status','change_status']
         widgets = {
             'DateDelivered': forms.DateInput(attrs={'type': 'date'}),
         }

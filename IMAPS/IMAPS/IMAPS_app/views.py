@@ -140,8 +140,9 @@ def supplier_delete(request, pk):
 #  INGREDIENTS RAW MATERIALS  #
 ##########################
 def ingredients_list(request):
-    # Get all ingredients
-    ingredients = IngredientsRawMaterials.objects.all()
+    # Get all ingredients, ordered by date delivered (newest first)
+    # and then by ID (newest first) for same-day entries
+    ingredients = IngredientsRawMaterials.objects.filter(change_status='active').order_by('-DateDelivered', '-id')
     
     # Calculate total quantity available for each ingredient
     for ing in ingredients:
@@ -286,18 +287,126 @@ def used_ingredients_create(request):
         try:
             form = UsedIngredientForm(request.POST)
             if form.is_valid():
-                # Create the used ingredient record with active status
                 used_ing = form.save(commit=False)
                 used_ing.RawMaterialName = used_ing.IngredientRawMaterialBatchCode.RawMaterialName
-                used_ing.change_status = 'active'  # Set correct status
-                used_ing.save()
+                used_ing.change_status = 'active'
                 
-                # Update the quantity left in the ingredient
-                ingredient = used_ing.IngredientRawMaterialBatchCode
-                ingredient.QuantityLeft = max(ingredient.QuantityLeft - used_ing.QuantityUsed, 0)
-                ingredient.save()
+                # Get the quantity to subtract and use category
+                quantity_to_subtract = used_ing.QuantityUsed
+                use_category = used_ing.UseCategory
+                raw_material_name = used_ing.RawMaterialName
+                date_used = used_ing.DateUsed
+                selected_material = used_ing.IngredientRawMaterialBatchCode
+
+                # First try to subtract from the selected material
+                if date_used < selected_material.DateDelivered:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Date Used ({date_used}) cannot be before the Date Delivered ({selected_material.DateDelivered}) of the selected material."
+                    }, status=400)
+
+                # Check if selected material has enough quantity
+                if selected_material.QuantityLeft >= quantity_to_subtract:
+                    # If it has enough, just subtract from it
+                    selected_material.QuantityLeft -= quantity_to_subtract
+                    selected_material.save()
+                    
+                    used_ing.save()
+                    return JsonResponse({
+                        "status": "success",
+                        "message": "Used ingredient record created successfully"
+                    })
                 
-                return JsonResponse({"status": "success", "message": "Used ingredient record created successfully"})
+                # If we get here, we need to use cascading logic for remaining quantity
+                # First subtract what we can from selected material
+                amount_from_selected = min(quantity_to_subtract, selected_material.QuantityLeft)
+                remaining_to_subtract = quantity_to_subtract - amount_from_selected
+                
+                if amount_from_selected > 0:
+                    selected_material.QuantityLeft -= amount_from_selected
+                    selected_material.save()
+                    
+                    # Create record for amount from selected material
+                    UsedIngredient.objects.create(
+                        IngredientRawMaterialBatchCode=selected_material,
+                        RawMaterialName=raw_material_name,
+                        QuantityUsed=amount_from_selected,
+                        DateUsed=date_used,
+                        UseCategory=use_category,
+                        change_status='active'
+                    )
+                
+                # Get available materials based on use category for remaining quantity
+                available_materials = []
+                if use_category == 'Both':
+                    # For 'Both', only get 'Both' materials ordered by oldest first
+                    available_materials = IngredientsRawMaterials.objects.filter(
+                        RawMaterialName=raw_material_name,
+                        UseCategory='Both',
+                        change_status='active',
+                        QuantityLeft__gt=0
+                    ).exclude(id=selected_material.id).order_by('DateDelivered', 'id')
+                else:
+                    # For 'GGB' or 'WBC', get materials of same category first, then 'Both'
+                    same_category_materials = IngredientsRawMaterials.objects.filter(
+                        RawMaterialName=raw_material_name,
+                        UseCategory=use_category,
+                        change_status='active',
+                        QuantityLeft__gt=0
+                    ).exclude(id=selected_material.id).order_by('DateDelivered', 'id')
+                    
+                    both_materials = IngredientsRawMaterials.objects.filter(
+                        RawMaterialName=raw_material_name,
+                        UseCategory='Both',
+                        change_status='active',
+                        QuantityLeft__gt=0
+                    ).exclude(id=selected_material.id).order_by('DateDelivered', 'id')
+                    
+                    available_materials = list(same_category_materials) + list(both_materials)
+                
+                # Validate date used against all materials
+                for material in available_materials:
+                    if date_used < material.DateDelivered:
+                        return JsonResponse({
+                            "status": "error",
+                            "message": f"Date Used ({date_used}) cannot be before the Date Delivered ({material.DateDelivered}) of any material being subtracted from."
+                        }, status=400)
+                
+                # Calculate total available quantity
+                total_available = sum(material.QuantityLeft for material in available_materials)
+                
+                if total_available < remaining_to_subtract:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Cannot subtract remaining {remaining_to_subtract} units. Only {total_available} units available across all applicable inventories."
+                    }, status=400)
+                
+                # Perform the cascading subtraction for remaining quantity
+                for material in available_materials:
+                    if remaining_to_subtract <= 0:
+                        break
+                        
+                    amount_from_this_material = min(remaining_to_subtract, material.QuantityLeft)
+                    material.QuantityLeft -= amount_from_this_material
+                    material.save()
+                    
+                    remaining_to_subtract -= amount_from_this_material
+                    
+                    # Create a used ingredient record for this subtraction
+                    if amount_from_this_material > 0:
+                        UsedIngredient.objects.create(
+                            IngredientRawMaterialBatchCode=material,
+                            RawMaterialName=raw_material_name,
+                            QuantityUsed=amount_from_this_material,
+                            DateUsed=date_used,
+                            UseCategory=use_category,
+                            change_status='active'
+                        )
+                
+                return JsonResponse({
+                    "status": "success",
+                    "message": "Used ingredient records created successfully"
+                })
             else:
                 return JsonResponse({
                     "status": "error",
@@ -307,9 +416,9 @@ def used_ingredients_create(request):
         except Exception as e:
             return JsonResponse({
                 "status": "error",
-                "message": f"Error creating used ingredient record: {str(e)}"
+                "message": str(e)
             }, status=500)
-    return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+    return redirect('ingredients_list')
 
 def used_ingredients_update(request, pk):
     used_ing = get_object_or_404(UsedIngredient, pk=pk)
@@ -355,8 +464,9 @@ def used_ingredients_delete(request, pk):
 #  PACKAGING RAW MATERIALS  #
 ##############################
 def packaging_list(request):
-    # Get all active packaging materials
-    materials = PackagingRawMaterials.objects.filter(change_status='active')
+    # Get all active packaging materials, ordered by date delivered (newest first)
+    # and then by ID (newest first) for same-day entries
+    materials = PackagingRawMaterials.objects.filter(change_status='active').order_by('-DateDelivered', '-id')
     
     # Calculate total quantity available for each packaging material
     for mat in materials:
@@ -387,8 +497,9 @@ def packaging_list(request):
             
             mat.TotalQuantityAvailable = both_total
     
-    # Get only active used packaging
-    used_packaging = UsedPackaging.objects.filter(change_status='active')
+    # Get only active used packaging, ordered by date used (newest first)
+    # and then by batch code (newest first) for same-day entries
+    used_packaging = UsedPackaging.objects.filter(change_status='active').order_by('-DateUsed', '-USEDPackagingBatchCode')
     create_form = PackagingRawMaterialsForm()
     used_packaging_create_form = UsedPackagingForm()
     context = {
@@ -477,18 +588,130 @@ def used_packaging_create(request):
         try:
             form = UsedPackagingForm(request.POST)
             if form.is_valid():
-                # Create the used packaging record with active status
                 used_pack = form.save(commit=False)
                 used_pack.RawMaterialName = used_pack.PackagingRawMaterialBatchCode.RawMaterialName
-                used_pack.change_status = 'active'  # Set correct status
-                used_pack.save()
+                used_pack.change_status = 'active'
                 
-                # Update the quantity left in the packaging
-                packaging = used_pack.PackagingRawMaterialBatchCode
-                packaging.QuantityLeft = max(packaging.QuantityLeft - used_pack.QuantityUsed, 0)
-                packaging.save()
+                # Get the quantity to subtract and use category
+                quantity_to_subtract = used_pack.QuantityUsed
+                use_category = used_pack.UseCategory
+                container_size = used_pack.PackagingRawMaterialBatchCode.ContainerSize
+                raw_material_name = used_pack.RawMaterialName
+                date_used = used_pack.DateUsed
+                selected_material = used_pack.PackagingRawMaterialBatchCode
+
+                # First try to subtract from the selected material
+                if date_used < selected_material.DateDelivered:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Date Used ({date_used}) cannot be before the Date Delivered ({selected_material.DateDelivered}) of the selected material."
+                    }, status=400)
+
+                # Check if selected material has enough quantity
+                if selected_material.QuantityLeft >= quantity_to_subtract:
+                    # If it has enough, just subtract from it
+                    selected_material.QuantityLeft -= quantity_to_subtract
+                    selected_material.save()
+                    
+                    used_pack.save()
+                    return JsonResponse({
+                        "status": "success",
+                        "message": "Used packaging record created successfully"
+                    })
                 
-                return JsonResponse({"status": "success", "message": "Used packaging record created successfully"})
+                # If we get here, we need to use cascading logic for remaining quantity
+                # First subtract what we can from selected material
+                amount_from_selected = min(quantity_to_subtract, selected_material.QuantityLeft)
+                remaining_to_subtract = quantity_to_subtract - amount_from_selected
+                
+                if amount_from_selected > 0:
+                    selected_material.QuantityLeft -= amount_from_selected
+                    selected_material.save()
+                    
+                    # Create record for amount from selected material
+                    UsedPackaging.objects.create(
+                        PackagingRawMaterialBatchCode=selected_material,
+                        RawMaterialName=raw_material_name,
+                        QuantityUsed=amount_from_selected,
+                        DateUsed=date_used,
+                        UseCategory=use_category,
+                        change_status='active'
+                    )
+                
+                # Get available materials based on use category for remaining quantity
+                available_materials = []
+                if use_category == 'Both':
+                    # For 'Both', only get 'Both' materials ordered by oldest first
+                    available_materials = PackagingRawMaterials.objects.filter(
+                        RawMaterialName=raw_material_name,
+                        ContainerSize=container_size,
+                        UseCategory='Both',
+                        change_status='active',
+                        QuantityLeft__gt=0
+                    ).exclude(id=selected_material.id).order_by('DateDelivered', 'id')
+                else:
+                    # For 'GGB' or 'WBC', get materials of same category first, then 'Both'
+                    same_category_materials = PackagingRawMaterials.objects.filter(
+                        RawMaterialName=raw_material_name,
+                        ContainerSize=container_size,
+                        UseCategory=use_category,
+                        change_status='active',
+                        QuantityLeft__gt=0
+                    ).exclude(id=selected_material.id).order_by('DateDelivered', 'id')
+                    
+                    both_materials = PackagingRawMaterials.objects.filter(
+                        RawMaterialName=raw_material_name,
+                        ContainerSize=container_size,
+                        UseCategory='Both',
+                        change_status='active',
+                        QuantityLeft__gt=0
+                    ).exclude(id=selected_material.id).order_by('DateDelivered', 'id')
+                    
+                    available_materials = list(same_category_materials) + list(both_materials)
+                
+                # Validate date used against all materials
+                for material in available_materials:
+                    if date_used < material.DateDelivered:
+                        return JsonResponse({
+                            "status": "error",
+                            "message": f"Date Used ({date_used}) cannot be before the Date Delivered ({material.DateDelivered}) of any material being subtracted from."
+                        }, status=400)
+                
+                # Calculate total available quantity
+                total_available = sum(material.QuantityLeft for material in available_materials)
+                
+                if total_available < remaining_to_subtract:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Cannot subtract remaining {remaining_to_subtract} units. Only {total_available} units available across all applicable inventories."
+                    }, status=400)
+                
+                # Perform the cascading subtraction for remaining quantity
+                for material in available_materials:
+                    if remaining_to_subtract <= 0:
+                        break
+                        
+                    amount_from_this_material = min(remaining_to_subtract, material.QuantityLeft)
+                    material.QuantityLeft -= amount_from_this_material
+                    material.save()
+                    
+                    remaining_to_subtract -= amount_from_this_material
+                    
+                    # Create a used packaging record for this subtraction
+                    if amount_from_this_material > 0:
+                        UsedPackaging.objects.create(
+                            PackagingRawMaterialBatchCode=material,
+                            RawMaterialName=raw_material_name,
+                            QuantityUsed=amount_from_this_material,
+                            DateUsed=date_used,
+                            UseCategory=use_category,
+                            change_status='active'
+                        )
+                
+                return JsonResponse({
+                    "status": "success",
+                    "message": "Used packaging records created successfully"
+                })
             else:
                 return JsonResponse({
                     "status": "error",

@@ -116,10 +116,92 @@
   <!-- Main Content -->
   <div class="main-content">
     <h1>Suppliers Inventory</h1>
+
+    <!-- Error Messages Section -->
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">
+          {{ message }}
+          <button type="button" class="close-alert" onclick="this.parentElement.style.display='none'">&times;</button>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="button-container">
       <button class="button-outline" onclick="openModal('addSupplierModal')">+ Add Supplier</button>
       <button class="import-button">Import Data</button>
     </div>
+
+    <!-- Add styles for messages -->
+    <style>
+      .messages {
+        margin-bottom: 20px;
+      }
+      
+      .alert {
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        position: relative;
+      }
+      
+      .alert-success {
+        color: #155724;
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      
+      .alert-error {
+        color: #721c24;
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      
+      .alert-warning {
+        color: #856404;
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+      }
+      
+      .alert-info {
+        color: #0c5460;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+      
+      .close-alert {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: inherit;
+        padding: 0 5px;
+      }
+      
+      .close-alert:hover {
+        opacity: 0.7;
+      }
+    </style>
+
+    <!-- Add JavaScript for auto-hiding messages -->
+    <script>
+      // Auto-hide messages after 5 seconds
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          const messages = document.querySelectorAll('.alert');
+          messages.forEach(function(message) {
+            message.style.display = 'none';
+          });
+        }, 5000);
+      });
+    </script>
 
     <!-- Table -->
     <div class="table-container">
@@ -134,7 +216,7 @@
             </th>
           
             <!-- Search bar on the right -->
-            <th class="search-bar-container" colspan="5" style="text-align: right;">
+            <th class="search-bar-container" colspan="4" style="text-align: right;">
               <div class="search-bar" style="display: inline-flex; align-items: center;">
                 <!-- Search icon (acts as submit) -->
                 <i class="fa-solid fa-magnifying-glass search-icon"
@@ -166,7 +248,6 @@
             <th>Supplier Code</th>
             <th>Supplier Name</th>
             <th>Category</th>
-            <th>Status</th>
             <th>Point Person</th>
             <th>Contact Number</th>
             <th>Email Address</th>
@@ -180,9 +261,8 @@
             <td>{{ sup.SupplierCode }}</td>
             <td>{{ sup.SupplierName }}</td>
             <td>{{ sup.Category }}</td>
-            <td>{{ sup.change_status|capfirst }}</td> <!-- new -->
             <td>{{ sup.PointPerson }}</td>
-             {# Contact Number #}
+            {# Contact Number #}
             <td class="multi-cell">
               {{ sup.contact_list.0 }}
               {% if sup.contact_list|length > 1 %}
@@ -214,23 +294,26 @@
             
             {# Social Media #}
             <td class="multi-cell">
-              {{ sup.sm_list.0 }}
-              {% if sup.sm_list|length > 1 %}
-                <div class="dropdown-wrapper">
-                  <span class="toggle-dropdown">▼</span>
-                  <ul class="dropdown-list">
-                    {% for sm in sup.sm_list|slice:"1:" %}
-                      <li>{{ sm }}</li>
-                    {% endfor %}
-                  </ul>
-                </div>
+              {% if sup.sm_list.0 %}
+                <a href="{{ sup.sm_list.0 }}" target="_blank" rel="noopener noreferrer">{{ sup.sm_list.0 }}</a>
+                {% if sup.sm_list|length > 1 %}
+                  <div class="dropdown-wrapper">
+                    <span class="toggle-dropdown">▼</span>
+                    <ul class="dropdown-list">
+                      {% for sm in sup.sm_list|slice:"1:" %}
+                        {% if sm %}
+                          <li><a href="{{ sm }}" target="_blank" rel="noopener noreferrer">{{ sm }}</a></li>
+                        {% endif %}
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
               {% endif %}
             </td>
             
-            
             <td>
               <button class="update-button" 
-              onclick="openUpdateModalSupplier(
+                onclick="openUpdateModalSupplier(
                   '{{ sup.SupplierCode }}',
                   '{{ sup.SupplierCode }}',
                   '{{ sup.SupplierName }}',
@@ -238,19 +321,18 @@
                   '{{ sup.SocialMedia }}',
                   '{{ sup.EmailAddress }}',
                   '{{ sup.ContactNumber }}',
-                  '{{ sup.PointPerson }}',
-                  '{{ sup.change_status }}'
-              )">Update</button>
+                  '{{ sup.PointPerson }}'
+                )">Update</button>
               <button class="delete-button" onclick="openDeleteModalSupplier('{{ sup.SupplierCode }}','{{ sup.SupplierName }}')">Delete</button>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9">No Suppliers Found.</td>
+            <td colspan="8">No Suppliers Found.</td>
           </tr>
           {% endfor %}
           <tr id="noResultsRow" style="display: none;">
-            <td colspan="9" style="text-align: center; color: gray;">No matching suppliers found.</td>
+            <td colspan="8" style="text-align: center; color: gray;">No matching suppliers found.</td>
           </tr>
         </tbody>
       </table>
@@ -259,185 +341,203 @@
 
   <!-- ADD SUPPLIER MODAL -->
 <div id="addSupplierModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Add Supplier</h2>
-      <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
+    <div class="modal-content" style="max-width: 400px; padding: 20px;">
+      <div class="modal-header" style="margin: -20px -20px 20px -20px; padding: 15px 20px; border-bottom: 1px solid #ddd; background: #f8f9fa;">
+        <h2 style="margin: 0; font-size: 18px;">Add Supplier</h2>
+        <span class="close" onclick="closeModal('addSupplierModal')">&times;</span>
+      </div>
+      <form method="POST" action="{% url 'supplier_create' %}" id="createSupplierForm" class="form-vertical">
+        {% csrf_token %}
+        
+        <!-- Supplier Code -->
+        <div style="margin-bottom: 15px;">
+          <label for="id_SupplierCode" style="display: block; margin-bottom: 5px; font-weight: normal;">
+            Supplier Code<span style="color: red;">*</span>:
+          </label>
+          <input type="text" name="SupplierCode" id="id_SupplierCode" required style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label for="id_SupplierName" style="display: block; margin-bottom: 5px; font-weight: normal;">
+            Supplier Name<span style="color: red;">*</span>:
+          </label>
+          <input type="text" name="SupplierName" id="id_SupplierName" required style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: normal;">Use Category<span style="color: red;">*</span>:</label>
+          <div style="margin-top: 10px;">
+            <div style="margin-bottom: 8px;">
+              <input type="radio" name="Category" value="Ingredients" id="id_Category_ING" required style="margin-right: 8px;">
+              <label for="id_Category_ING" style="display: inline; margin-bottom: 0;">Ingredients</label>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <input type="radio" name="Category" value="Packaging" id="id_Category_PCK" style="margin-right: 8px;">
+              <label for="id_Category_PCK" style="display: inline; margin-bottom: 0;">Packaging</label>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <input type="radio" name="Category" value="Both" id="id_Category_Both" style="margin-right: 8px;">
+              <label for="id_Category_Both" style="display: inline; margin-bottom: 0;">Both</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point Person -->
+        <div style="margin-bottom: 15px;">
+          <label for="id_PointPerson" style="display: block; margin-bottom: 5px; font-weight: normal;">
+            Point Person:
+          </label>
+          <input type="text" name="PointPerson" id="id_PointPerson" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <!-- Contact Numbers -->
+        <div class="multi-field" style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: normal;">
+            Contact Number:
+          </label>
+          <div class="fields-wrap">
+            <div class="field-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="text" name="ContactNumber[]" pattern="[0-9]+" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <button type="button" class="add-btn" data-field-name="ContactNumber" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Addresses -->
+        <div class="multi-field" style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: normal;">
+            Email Address:
+          </label>
+          <div class="fields-wrap">
+            <div class="field-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="email" name="EmailAddress[]" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.com$" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <button type="button" class="add-btn" data-field-name="EmailAddress" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Media -->
+        <div class="multi-field" style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: normal;">
+            Social Media:
+          </label>
+          <div class="fields-wrap">
+            <div class="field-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input type="url" name="SocialMedia[]" pattern="https?://.+" placeholder="https://" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <button type="button" class="add-btn" data-field-name="SocialMedia" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-container" style="display: flex; justify-content: flex-end; gap: 10px; margin: 20px -15px 0; padding: 15px 15px 0; border-top: 1px solid #eee;">
+          <button type="button" class="button-outline" onclick="clearAddSupplierForm(); closeModal('addSupplierModal')" style="padding: 6px 12px; border-radius: 4px; min-width: 80px;">Discard</button>
+          <button type="submit" class="update-button" style="padding: 6px 12px; border-radius: 4px; min-width: 80px;">Save</button>
+        </div>
+      </form>
     </div>
-    <form method="POST" action="{% url 'supplier_create' %}" id="createSupplierForm" class="form-vertical">
-      {% csrf_token %}
-
-      <!-- Supplier Code -->
-      <div class="form-group">
-        <label for="supplier_code_create">
-          Supplier Code<span class="required-asterisk">*</span>:
-        </label>
-        <input type="text" name="SupplierCode" id="supplier_code_create" required>
-      </div>
-
-      <!-- Supplier Name -->
-      <div class="form-group">
-        <label for="supplier_name_create">
-          Supplier Name<span class="required-asterisk">*</span>:
-        </label>
-        <input type="text" name="SupplierName" id="supplier_name_create" required>
-      </div>
-
-      <!-- Category -->
-      <div class="form-group">
-        <label>Category<span class="required-asterisk">*</span>:</label>
-        <div class="radio-group">
-          <div class="radio-option">
-            <input type="radio" name="Category" id="categoryIngredientCreate" value="Ingredient" required>
-            <label for="categoryIngredientCreate">Ingredient</label>
-          </div>
-          <div class="radio-option">
-            <input type="radio" name="Category" id="categoryPackagingCreate" value="Packaging">
-            <label for="categoryPackagingCreate">Packaging</label>
-          </div>
-          <div class="radio-option">
-            <input type="radio" name="Category" id="categoryBothCreate" value="Both">
-            <label for="categoryBothCreate">Both</label>
-          </div>
-        </div>
-      </div>
-            <!-- Point Person -->
-      <div class="form-group">
-        <label for="point_person_create">Point Person:</label>
-        <input type="text" name="PointPerson" id="point_person_create">
-      </div>
-
-      <!-- (optional) default status -->
-      <input type="hidden" name="change_status" value="active">
-
-      <!-- Social Media -->
-      <div class="multi-field" data-field-name="SocialMedia">
-        <label>Social Media:</label>
-        <div class="fields-wrap">
-          <div class="field-row">
-            <input type="url" name="SocialMedia[]" id="social_media_create_0" placeholder="https://…" />
-          </div>
-        </div>
-        <button type="button" class="add-btn" data-field-name="SocialMedia">+ Add more</button>
-      </div>
-
-      <!-- Email Address -->
-      <div class="multi-field" data-field-name="EmailAddress">
-        <label>Email Address:</label>
-        <div class="fields-wrap">
-          <div class="field-row">
-            <input type="email" name="EmailAddress[]" id="email_address_create_0" placeholder="name@example.com" />
-          </div>
-        </div>
-        <button type="button" class="add-btn" data-field-name="EmailAddress">+ Add more</button>
-      </div>
-
-      <!-- Contact Number -->
-      <div class="multi-field" data-field-name="ContactNumber">
-        <label>Contact Number:</label>
-        <div class="fields-wrap">
-          <div class="field-row">
-            <input type="tel" name="ContactNumber[]" id="contact_number_create_0" placeholder="+63…" pattern="^[0-9+\\-\\s]+$"/>
-          </div>
-        </div>
-        <button type="button" class="add-btn" data-field-name="ContactNumber">+ Add more</button>
-      </div>
-
-
-
-      <div class="button-container">
-        <button type="button" class="button-outline" onclick="closeModal('addSupplierModal')">Discard</button>
-        <button type="submit" class="update-button">Save</button>
-      </div>
-    </form>
   </div>
-</div>
-
-
 
   <!-- SUPPLIER UPDATE MODAL -->
 <div id="updateSupplierModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Update Supplier</h2>
+  <div class="modal-content" style="max-width: 400px; padding: 20px;">
+    <div class="modal-header" style="margin: -20px -20px 20px -20px; padding: 15px 20px; border-bottom: 1px solid #ddd; background: #f8f9fa;">
+      <h2 style="margin: 0; font-size: 18px;">Update Supplier</h2>
       <span class="close" onclick="closeModal('updateSupplierModal')">&times;</span>
     </div>
-    <form method="POST" id="updateSupplierForm">
+    <form method="POST" id="updateSupplierForm" class="form-vertical">
       {% csrf_token %}
+      
+      <!-- Supplier Code (read-only) -->
+      <div style="margin-bottom: 15px;">
+        <label for="modalSupplierCode" style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Supplier Code:
+        </label>
+        <input type="text" id="modalSupplierCode" readonly style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; background-color: #f5f5f5;">
+        <input type="hidden" name="SupplierCode" id="modalSupplierCodeHidden">
+      </div>
 
-      <!-- SupplierCode, Name, Category unchanged… -->
+      <div style="margin-bottom: 15px;">
+        <label for="updatePassword" style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Password<span style="color: red;">*</span>:
+        </label>
+        <input type="password" id="updatePassword" name="password" required style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label for="modalSupplierName" style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Supplier Name<span style="color: red;">*</span>:
+        </label>
+        <input type="text" name="SupplierName" id="modalSupplierName" required style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+      </div>
 
-      <label for="supplier_code_update">Supplier Code:</label>
-      <input type="text" name="SupplierCode" id="supplier_code_update" readonly>
-
-      <label for="supplier_name_update">Supplier Name<span style="color:red;">*</span>:</label>
-      <input type="text" name="SupplierName" id="supplier_name_update" required>
-
-      <label for="category_update">Category<span style="color:red;">*</span>:</label>
-      <select name="Category" id="category_update" required>
-        <option value="Ingredient">Ingredient</option>
-        <option value="Packaging">Packaging</option>
-        <option value="Both">Both</option>
-      </select>
-
-      <label for="change_status_update">Status<span class="required-asterisk">*</span>:</label>
-        <select name="change_status" id="change_status_update" required>
-          <option value="active">Active</option>
-          <option value="deleted">Deleted</option>
-        </select>
-
-      <label for="point_person_update">Point Person:</label>
-      <input type="text"
-             name="PointPerson"
-             id="point_person_update"
-             />
-      <!-- Now the 3 multi-fields: -->
-
-      <!-- Social Media -->
-      <div class="multi-field" data-field-name="SocialMedia">
-        <label>Social Media:</label>
-        <div class="fields-wrap">
-          <div class="field-row">
-            <input type="url" name="SocialMedia[]" id="social_media_update_0" placeholder="https://…" />
+      <!-- Category in Update Form -->
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: normal;">Use Category<span style="color: red;">*</span>:</label>
+        <div style="margin-top: 10px;">
+          <div style="margin-bottom: 8px;">
+            <input type="radio" name="Category" value="Ingredients" id="updateCategory_ING" required style="margin-right: 1px;">
+            <label for="updateCategory_ING" style="display: inline; margin-bottom: 0;">Ingredients</label>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <input type="radio" name="Category" value="Packaging" id="updateCategory_PCK" style="margin-right: 1px;">
+            <label for="updateCategory_PCK" style="display: inline; margin-bottom: 0;">Packaging</label>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <input type="radio" name="Category" value="Both" id="updateCategory_Both" style="margin-right: 1px;">
+            <label for="updateCategory_Both" style="display: inline; margin-bottom: 0;">Both</label>
           </div>
         </div>
-        <button type="button" class="add-btn" data-field-name="SocialMedia">+ Add more</button>
-      </div>
-      
-      <!-- Email Address -->
-      <div class="multi-field" data-field-name="EmailAddress">
-        <label>Email Address:</label>
-        <div class="fields-wrap">
-          <div class="field-row">
-            <input type="email" name="EmailAddress[]" id="email_address_update_0" placeholder="name@example.com" />
-          </div>
-          <button type="button" class="add-btn" data-field-name="EmailAddress">+ Add more</button>
       </div>
 
-      <!-- Contact Number -->
-      <div class="multi-field" data-field-name="ContactNumber">
-        <label>Contact Number:</label>
-        <div class="fields-wrap">
-          <div class="field-row">
-            <input type="tel" name="ContactNumber[]" id="contact_number_update_0" placeholder="+63…" pattern="^[0-9+\-\s]+$"/>
-          </div>
-    </div>
-    <button type="button" class="add-btn" data-field-name="ContactNumber">+ Add more</button>
-      </div>
-
-
-      
-
-      <!-- Password and buttons unchanged… -->
-      <div class="form-group">
-        <label for="deleteUsedPassword">
-          Password<span style="color:red;">*</span>:
+      <!-- Point Person -->
+      <div style="margin-bottom: 15px;">
+        <label for="modalPointPerson" style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Point Person<span style="color: red;">*</span>:
         </label>
-        <input type="password" id="deleteUsedPassword" name="password" required>
+        <input type="text" name="PointPerson" id="modalPointPerson" required style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
       </div>
-      <div class="button-container">
-        <button type="button" class="button-outline" onclick="closeModal('updateSupplierModal')">Cancel</button>
-        <button type="submit" class="update-button">Save Changes</button>
+
+      <!-- Contact Numbers -->
+      <div class="multi-field" style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Contact Number<span style="color: red;">*</span>:
+        </label>
+        <div class="fields-wrap" id="updateContactContainer">
+          <div class="field-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="text" name="ContactNumber[]" required pattern="[0-9]+" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="button" class="add-btn" data-field-name="ContactNumber" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Addresses -->
+      <div class="multi-field" style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Email Address<span style="color: red;">*</span>:
+        </label>
+        <div class="fields-wrap" id="updateEmailContainer">
+          <div class="field-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="email" name="EmailAddress[]" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.com$" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="button" class="add-btn" data-field-name="EmailAddress" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Social Media -->
+      <div class="multi-field" style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: normal;">
+          Social Media:
+        </label>
+        <div class="fields-wrap" id="updateSocialMediaContainer">
+          <div class="field-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="url" name="SocialMedia[]" pattern="https?://.+" placeholder="https://" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="button" class="add-btn" data-field-name="SocialMedia" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="button-container" style="display: flex; justify-content: flex-start; gap: 10px; margin: 20px -15px 0; padding: 15px 15px 0; border-top: 1px solid #eee;">
+        <button type="button" class="button-outline" onclick="clearUpdateSupplierForm(); closeModal('updateSupplierModal')" style="padding: 6px 12px; border-radius: 4px; min-width: 80px;">Discard</button>
+        <button type="submit" class="update-button" style="padding: 6px 12px; border-radius: 4px; min-width: 80px;">Save</button>
       </div>
     </form>
   </div>
@@ -446,23 +546,21 @@
 
   <!-- DELETE SUPPLIER MODAL -->
   <div id="deleteSupplierModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Delete Supplier</h2>
+    <div class="modal-content" style="max-width: 400px; padding: 20px;">
+      <div class="modal-header" style="margin: -20px -20px 20px -20px; padding: 15px 20px; border-bottom: 1px solid #ddd; background: #f8f9fa;">
+        <h2 style="margin: 0; font-size: 18px;">Delete Supplier</h2>
         <span class="close" onclick="closeModal('deleteSupplierModal')">&times;</span>
       </div>
-      <p id="deleteSupplierMessage">Are you sure you want to delete this supplier?</p>
+      <p id="deleteSupplierMessage" style="margin-bottom: 15px;">Are you sure you want to delete this supplier?</p>
       <form method="POST" id="deleteSupplierForm">
         {% csrf_token %}
-        <div class="form-group">
-          <label for="deletePassword">
-            Password<span class="required-asterisk">*</span>:
-          </label>
-          <input type="password" id="deletePassword" name="password" required>
+        <div style="margin-bottom: 15px;">
+          <label for="deletePassword" style="display: block; margin-bottom: 5px; font-weight: normal;">Password<span style="color: red;">*</span>:</label>
+          <input type="password" id="deletePassword" name="password" required style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
         </div>
-        <div class="button-container">
-          <button type="submit" class="update-button">Delete</button>
-          <button type="button" class="button-outline" onclick="closeModal('deleteSupplierModal')">Cancel</button>
+        <div class="button-container" style="display: flex; justify-content: flex-end; gap: 10px; margin: 20px -15px 0; padding: 15px 15px 0; border-top: 1px solid #eee;">
+          <button type="button" class="button-outline" onclick="closeModal('deleteSupplierModal')" style="padding: 6px 12px; border-radius: 4px; min-width: 80px;">Cancel</button>
+          <button type="submit" class="update-button" style="padding: 6px 12px; border-radius: 4px; min-width: 80px;">Delete</button>
         </div>
       </form>
     </div>
@@ -475,32 +573,88 @@
     }
     function closeModal(id) {
       document.getElementById(id).style.display = "none";
+      // Clear form data when closing modal
+      if (id === 'addSupplierModal') {
+        clearAddSupplierForm();
+      } else if (id === 'updateSupplierModal') {
+        clearUpdateSupplierForm();
+      } else if (id === 'deleteSupplierModal') {
+        document.getElementById('deletePassword').value = '';
+      }
     }
-function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson, changeStatus) {
-  // 1. Set the form action
-  const form = document.getElementById('updateSupplierForm');
-  form.action = `/suppliers/update/${pk}/`;
 
-  // 2. Update the modal title with the supplier code
-  document.getElementById('modalSupplierCode').textContent = supplierCode;
-
-  // 3. Clear or prefill inputs
-  document.getElementById('updatePassword').value = '';  // always clear password for security
-  document.getElementById('SupplierName').value = supplierName;
-
-  // 4. Check the appropriate category radio
-  document.getElementById('categoryIngredient').checked = (category === 'Ingredient');
-  document.getElementById('categoryPackaging').checked  = (category === 'Packaging');
-  document.getElementById('categoryBoth').checked       = (category === 'Both');
-
-  // 5. Prefill the rest of the fields
-  document.getElementById('SocialMedia').value    = socialMedia;
-  document.getElementById('EmailAddress').value   = emailAddress;
-  document.getElementById('ContactNumber').value  = contactNumber;
-  document.getElementById('PointPerson').value    = pointPerson;
-  // 6. Finally, open the modal
-  openModal('updateSupplierModal');
-}
+    function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson) {
+      // Set the form action
+      const form = document.getElementById('updateSupplierForm');
+      form.action = `/suppliers/update/${pk}/`;
+      
+      // Update supplier code fields
+      document.getElementById('modalSupplierCode').value = supplierCode;
+      document.getElementById('modalSupplierCodeHidden').value = supplierCode;
+      
+      // Clear password for security
+      document.getElementById('updatePassword').value = '';
+      
+      // Set supplier name
+      document.getElementById('modalSupplierName').value = supplierName;
+      
+      // Set the appropriate category radio
+      document.getElementById('updateCategory_ING').checked = (category === 'Ingredients');
+      document.getElementById('updateCategory_PCK').checked = (category === 'Packaging');
+      document.getElementById('updateCategory_Both').checked = (category === 'Both');
+      
+      // Handle multiple fields
+      // Point Person
+      document.getElementById('modalPointPerson').value = pointPerson.split(';')[0] || '';
+      
+      // Contact Numbers
+      const contactContainer = document.getElementById('updateContactContainer');
+      contactContainer.innerHTML = ''; // Clear existing
+      const contacts = contactNumber.split(';').map(c => c.trim()).filter(c => c);
+      contacts.forEach((contact, index) => {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.style = 'display: flex; gap: 8px; margin-bottom: 8px;';
+        row.innerHTML = `
+          <input type="text" name="ContactNumber[]" required pattern="[0-9]+" oninput="this.value = this.value.replace(/[^0-9]/g, '')" value="${contact}" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+          ${index === contacts.length - 1 ? '<button type="button" class="add-btn" data-field-name="ContactNumber" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>' : ''}
+        `;
+        contactContainer.appendChild(row);
+      });
+      
+      // Email Addresses
+      const emailContainer = document.getElementById('updateEmailContainer');
+      emailContainer.innerHTML = ''; // Clear existing
+      const emails = emailAddress.split(';').map(e => e.trim()).filter(e => e);
+      emails.forEach((email, index) => {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.style = 'display: flex; gap: 8px; margin-bottom: 8px;';
+        row.innerHTML = `
+          <input type="email" name="EmailAddress[]" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.com$" value="${email}" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+          ${index === emails.length - 1 ? '<button type="button" class="add-btn" data-field-name="EmailAddress" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>' : ''}
+        `;
+        emailContainer.appendChild(row);
+      });
+      
+      // Social Media
+      const socialContainer = document.getElementById('updateSocialMediaContainer');
+      socialContainer.innerHTML = ''; // Clear existing
+      const socials = socialMedia.split(';').map(s => s.trim()).filter(s => s);
+      socials.forEach((social, index) => {
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.style = 'display: flex; gap: 8px; margin-bottom: 8px;';
+        row.innerHTML = `
+          <input type="url" name="SocialMedia[]" pattern="https?://.+" placeholder="https://" value="${social}" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px;">
+          ${index === socials.length - 1 ? '<button type="button" class="add-btn" data-field-name="SocialMedia" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; background: white;">+</button>' : ''}
+        `;
+        socialContainer.appendChild(row);
+      });
+      
+      // Open the modal
+      openModal('updateSupplierModal');
+    }
 
     function openDeleteModalSupplier(pk, name) {
       document.getElementById('deleteSupplierMessage').textContent =
@@ -508,6 +662,7 @@ function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socia
       document.getElementById('deleteSupplierForm').action = `/suppliers/delete/${pk}/`;
       openModal('deleteSupplierModal');
     }
+
     window.onclick = function(e) {
       const modals = ['addSupplierModal','updateSupplierModal','deleteSupplierModal'];
       modals.forEach(function(id) {
@@ -517,7 +672,7 @@ function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socia
         }
       });
     }
-  const supRowsPerPage = 3;
+  const supRowsPerPage = 5;
   let supCurrentPage = 1;
   let filteredRows = null;
 
@@ -592,7 +747,7 @@ function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socia
 
   // Run once on page load
 document.addEventListener('DOMContentLoaded', () => {
-  // Delegate all “Add more” clicks
+  // Delegate all "Add more" clicks
   document.querySelectorAll('.add-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const field = btn.dataset.fieldName;       // e.g. "EmailAddress"
@@ -610,50 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Override to inject existing data & open the modal
-function openUpdateModalSupplier(pk, supplierCode, supplierName, category, socialMedia, emailAddress, contactNumber, pointPerson,changeStatus) {
-  const form = document.getElementById('updateSupplierForm');
-  form.action = `/suppliers/update/${pk}/`;
-  
-  document.getElementById('supplier_code_update').value = supplierCode;
-  document.getElementById('supplier_name_update').value = supplierName;
-  document.getElementById('category_update').value = category;
-  document.getElementById('change_status_update').value = changeStatus;  // new
-  document.getElementById('point_person_update').value    = pointPerson;  // <— add this line!
-
-
-  // Helper: split on comma or semicolon, trim, drop empties
-  const splitList = str => str
-    ? str.split(/[;,]/).map(s=>s.trim()).filter(Boolean)
-    : [];
-
-  // For each multi-field type, clear old rows and re-create
-  const types = ['SocialMedia','EmailAddress','ContactNumber'];
-  types.forEach(type => {
-    const raw = { SocialMedia: socialMedia,
-                  EmailAddress: emailAddress,
-                  ContactNumber: contactNumber,
-                }[type] || '';
-    const list = splitList(raw);
-
-    const wrapper = document.querySelector(`.multi-field[data-field-name="${type}"] .fields-wrap`);
-    // remove all but the first row:
-    wrapper.querySelectorAll('.field-row')
-      .forEach((row, i) => { if (i>0) row.remove(); });
-
-    // fill 
-    wrapper.querySelector('input').value = list[0]||'';
-    // clone extras
-    list.slice(1).forEach(val => {
-      const clone = wrapper.querySelector('.field-row').cloneNode(true);
-      clone.querySelector('input').value = val;
-      wrapper.appendChild(clone);
-    });
-  });
-
-  openModal('updateSupplierModal');
-}
-// Pin‐open on click
+// Pin-open on click
 document.querySelectorAll('.toggle-dropdown').forEach(icon => {
   icon.addEventListener('click', e => {
     const wrapper = icon.closest('.dropdown-wrapper');
@@ -661,11 +773,75 @@ document.querySelectorAll('.toggle-dropdown').forEach(icon => {
     e.stopPropagation();
   });
 });
+
 // Close when clicking outside
 document.addEventListener('click', () => {
   document.querySelectorAll('.dropdown-wrapper.open')
           .forEach(w => w.classList.remove('open'));
 });
+
+function clearAddSupplierForm() {
+  const form = document.getElementById('createSupplierForm');
+  form.reset(); // Reset all form fields
+  
+  // Uncheck all category radio buttons
+  document.getElementById('id_Category_ING').checked = false;
+  document.getElementById('id_Category_PCK').checked = false;
+  document.getElementById('id_Category_Both').checked = false;
+  
+  // Clear supplier code
+  document.getElementById('id_SupplierCode').value = '';
+  
+  // Clear all additional fields that were added dynamically
+  const multiFields = form.querySelectorAll('.fields-wrap');
+  multiFields.forEach(container => {
+    // Keep only the first field row and clear its value
+    const rows = container.querySelectorAll('.field-row');
+    rows.forEach((row, index) => {
+      if (index === 0) {
+        row.querySelector('input').value = '';
+      } else {
+        row.remove();
+      }
+    });
+  });
+}
+
+function clearUpdateSupplierForm() {
+  const form = document.getElementById('updateSupplierForm');
+  form.reset(); // Reset all form fields
+  
+  // Uncheck all category radio buttons
+  document.getElementById('updateCategory_ING').checked = false;
+  document.getElementById('updateCategory_PCK').checked = false;
+  document.getElementById('updateCategory_Both').checked = false;
+  
+  // Clear supplier code displays
+  document.getElementById('modalSupplierCode').value = '';
+  document.getElementById('modalSupplierCodeHidden').value = '';
+  
+  // Clear password field
+  document.getElementById('updatePassword').value = '';
+  
+  // Clear point person
+  document.getElementById('modalPointPerson').value = '';
+  
+  // Reset all multi-field containers to single empty field
+  ['updateContactContainer', 'updateEmailContainer', 'updateSocialMediaContainer'].forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (container) {
+      // Keep only first row and clear its value
+      const rows = container.querySelectorAll('.field-row');
+      rows.forEach((row, index) => {
+        if (index === 0) {
+          row.querySelector('input').value = '';
+        } else {
+          row.remove();
+        }
+      });
+    }
+  });
+}
 </script>
 
 </body>
