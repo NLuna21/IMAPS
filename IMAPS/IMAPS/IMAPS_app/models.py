@@ -28,10 +28,10 @@ class Supplier(models.Model):
         ('Both', 'Both'),
     ]
     Category = models.CharField(max_length=10, choices=CATEGORY_CHOICES)
-    SocialMedia = models.CharField(max_length=255, blank=True, null=True)
-    EmailAddress = models.CharField(max_length=320, blank=True, null=True)
-    ContactNumber = models.CharField(max_length=20, blank=True, null=True)
-    PointPerson = models.CharField(max_length=255, blank=True, null=True)
+    SocialMedia = models.CharField(max_length=255, blank=True, null=True, default='None')
+    EmailAddress = models.CharField(max_length=320, blank=True, null=True, default='None')
+    ContactNumber = models.CharField(max_length=20, blank=True, null=True, default='None')
+    PointPerson = models.CharField(max_length=255, blank=True, null=True, default='None')
 
     def __str__(self):
         return f"{self.SupplierName} ({self.SupplierCode})"

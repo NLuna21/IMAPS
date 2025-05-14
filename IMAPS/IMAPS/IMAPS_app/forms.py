@@ -91,12 +91,13 @@ class PackagingRawMaterialsForm(RequiredFieldsAsteriskMixin, forms.ModelForm):
 
         # Human-readable field labels
         self.fields['SupplierCode'].label = 'Supplier Code'
+        self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Packaging', 'Both'])
         self.fields['RawMaterialName'].label = 'Raw Material Name'
         self.fields['ContainerSize'].label = 'Container Size'
         self.fields['DateDelivered'].label = 'Date Delivered'
         self.fields['QuantityBought'].label = 'Quantity Bought'
         self.fields['Cost'].label = 'Total Cost'
-        self.fields['SupplierCode'].queryset = Supplier.objects.filter(Category__in=['Packaging', 'Both'])
+ 
 
 
 class UsedIngredientForm(RequiredFieldsAsteriskMixin, forms.ModelForm):

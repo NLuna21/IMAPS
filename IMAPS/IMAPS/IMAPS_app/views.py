@@ -72,10 +72,10 @@ def supplier_create(request):
             use_category = request.POST.get('UseCategory')
             
             # Set the appropriate category based on use category
-            if use_category == 'WBC':
-                supplier.Category = 'White Labeled Client'
-            elif use_category == 'GGB':
-                supplier.Category = 'Glow Glass Beauty'
+            if use_category == 'Ingredients':
+                supplier.Category = 'Ingredients'
+            elif use_category == 'Packaging':  
+                supplier.Category = 'Packaging'
             elif use_category == 'Both':
                 supplier.Category = 'Both'
             
@@ -98,10 +98,10 @@ def supplier_update(request, pk):
             use_category = request.POST.get('UseCategory')
             
             # Set the appropriate category based on use category
-            if use_category == 'WBC':
-                supplier.Category = 'White Labeled Client'
-            elif use_category == 'GGB':
-                supplier.Category = 'Glow Glass Beauty'
+            if use_category == 'Ingredients':
+                supplier.Category = 'Ingredients'
+            elif use_category == 'Packaging':
+                supplier.Category = 'Packaging'
             elif use_category == 'Both':
                 supplier.Category = 'Both'
             

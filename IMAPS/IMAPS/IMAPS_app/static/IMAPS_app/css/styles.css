@@ -203,7 +203,7 @@ tbody tr:last-child td:last-child {
 th,
 td {
     padding: 20px;
-    text-align: left;
+    text-align: center;
     font-size: 14px;
     font-weight: normal;
     white-space: nowrap;

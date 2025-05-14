@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'imaps',       # Your DB name
         'USER': 'root',           # Your MySQL username
-        'PASSWORD': '1234',   # Your MySQL password
+        'PASSWORD': 'lunask21',   # Your MySQL password
         'HOST': '127.0.0.1',    # Use '127.0.0.1' instead of 'localhost'
         'PORT': '3306',         # Use 3306 if running a standard MySQL server
         'OPTIONS': {
